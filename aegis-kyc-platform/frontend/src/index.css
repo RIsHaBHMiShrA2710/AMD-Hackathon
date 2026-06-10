@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global Base ──────────────────────────────────────────────────────────── */
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #0a0e1a;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar Styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1629;
+}
+::-webkit-scrollbar-thumb {
+  background: #2563eb;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a7fff;
+}
+
+/* ── Glass Morphism Utility ───────────────────────────────────────────────── */
+.glass {
+  background: rgba(15, 22, 41, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+/* ── Gradient Text ────────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #4a7fff 0%, #a78bfa 50%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── AMD GPU Badge Shimmer ────────────────────────────────────────────────── */
+.amd-shimmer {
+  background: linear-gradient(90deg, #e05252 0%, #ff6b35 50%, #e05252 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Pipeline Node Connector Lines ───────────────────────────────────────── */
+.pipeline-connector {
+  width: 2px;
+  background: linear-gradient(180deg, #2563eb 0%, #7c5cbf 100%);
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+.pipeline-connector.active {
+  opacity: 1;
+  animation: pulse-line 1s ease-in-out infinite;
+}
+@keyframes pulse-line {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ── Mermaid Diagram Overrides ────────────────────────────────────────────── */
+.mermaid-container .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Decision Badge Animations ────────────────────────────────────────────── */
+.decision-approve { 
+  background: linear-gradient(135deg, #065f46, #059669);
+  box-shadow: 0 0 20px rgba(5, 150, 105, 0.4);
+}
+.decision-review {
+  background: linear-gradient(135deg, #78350f, #d97706);
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4);
+}
+.decision-escalate {
+  background: linear-gradient(135deg, #7f1d1d, #dc2626);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+/* ── Typing cursor animation for streaming text ───────────────────────────── */
+.typing-cursor::after {
+  content: '▊';
+  animation: blink 0.7s step-end infinite;
+  color: #4a7fff;
+  margin-left: 2px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

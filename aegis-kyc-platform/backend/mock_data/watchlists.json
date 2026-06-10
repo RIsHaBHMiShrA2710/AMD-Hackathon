@@ -1,0 +1,37 @@
+[
+  {
+    "id": "WL-001",
+    "names": ["Viktor Sokolov", "Victor Sokolov", "V. Sokolov", "Viktor S."],
+    "risk_tier": "HIGH",
+    "country": "RU",
+    "reason": "Sanctioned under OFAC SDN list for financial crimes"
+  },
+  {
+    "id": "WL-002",
+    "names": ["Chen Wei-Lin", "Wei Lin Chen", "Chen Weilin", "C.W. Lin"],
+    "risk_tier": "HIGH",
+    "country": "CN",
+    "reason": "Listed for money laundering and terrorist financing"
+  },
+  {
+    "id": "WL-003",
+    "names": ["Khalid Al-Rashidi", "Khalid Rashidi", "K. Al-Rashidi", "Khalid Alrashidi"],
+    "risk_tier": "HIGH",
+    "country": "IR",
+    "reason": "Designated under UN Security Council Resolution 1267"
+  },
+  {
+    "id": "WL-004",
+    "names": ["Dmitri Volkov", "Dmitry Volkov", "D. Volkov", "Dimitri Volkov"],
+    "risk_tier": "MEDIUM",
+    "country": "RU",
+    "reason": "Under investigation for sanctions evasion via shell companies"
+  },
+  {
+    "id": "WL-005",
+    "names": ["Amara Okonkwo", "Amara Okonko", "A. Okonkwo", "Amara Okwonko"],
+    "risk_tier": "MEDIUM",
+    "country": "NG",
+    "reason": "Flagged for Politically Exposed Person (PEP) status — Level 2"
+  }
+]
