@@ -297,17 +297,17 @@ cd aegis-kyc-platform/backend
 
 # Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Linux/macOS
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Run self-test (optional but recommended)
-python test_graph.py
+venv\Scripts\python test_graph.py          # Windows
+# python test_graph.py                     # Linux/macOS (after activating venv)
 
-# Start the FastAPI server
-uvicorn app:app --host 0.0.0.0 --port 8001 --reload
+# Start the FastAPI server — use the venv's uvicorn directly
+venv\Scripts\uvicorn app:app --host 0.0.0.0 --port 8001 --reload   # Windows
+# uvicorn app:app --host 0.0.0.0 --port 8001 --reload               # Linux/macOS
 ```
 
 Backend available at: http://localhost:8001  

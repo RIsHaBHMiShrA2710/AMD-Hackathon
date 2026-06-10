@@ -12,7 +12,7 @@ echo ============================================================
 echo.
 
 :: Start FastAPI backend in a new window
-start "AegisKYC Backend (FastAPI)" cmd /k "cd /d "%~dp0backend" && call venv\Scripts\activate.bat && uvicorn app:app --host 0.0.0.0 --port 8001 --reload"
+start "AegisKYC Backend (FastAPI)" cmd /k "cd /d "%~dp0backend" && venv\Scripts\uvicorn app:app --host 0.0.0.0 --port 8001 --reload"
 
 :: Small delay to let backend start first
 timeout /t 2 /nobreak > nul
