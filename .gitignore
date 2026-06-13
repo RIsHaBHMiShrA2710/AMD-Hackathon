@@ -37,7 +37,7 @@ logs/
 
 # Node.js / Frontend
 node_modules/
-frontend/dist/
+# frontend/dist/ — intentionally tracked so AMD pod can git pull without Node.js
 frontend/.vite/
 npm-debug.log*
 yarn-debug.log*
