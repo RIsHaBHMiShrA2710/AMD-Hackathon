@@ -65,6 +65,13 @@ async def lifespan(app: FastAPI):
 
 
 # ── FastAPI App ────────────────────────────────────────────────────────────────
+# Detect if running in Jupyter/AMD pod and set root_path prefix dynamically
+ROOT_PATH = ""
+jupyter_prefix = os.getenv("JUPYTERHUB_SERVICE_PREFIX")
+if jupyter_prefix:
+    ROOT_PATH = f"/{jupyter_prefix.strip('/')}/proxy/8001"
+    logger.info("AegisKYC: Detected Jupyter environment, setting root_path to %s", ROOT_PATH)
+
 app = FastAPI(
     title="AegisKYC API",
     description="Agentic KYC Intelligence Platform — AMD ROCm Hackathon",
@@ -72,6 +79,8 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    root_path=ROOT_PATH,
 )
 
 # CORS — allow local Vite dev server + wildcard for Jupyter proxy URLs

@@ -65,7 +65,7 @@ export default function UploadPanel({
     if (!documentText.trim() || isStreaming) return
 
     try {
-      const response = await fetch('/api/kyc/stream', {
+      const response = await fetch('api/kyc/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ document_text: documentText }),

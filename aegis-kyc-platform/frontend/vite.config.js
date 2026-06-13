@@ -14,6 +14,7 @@ const API_TARGET = process.env.VITE_API_URL || 'http://localhost:8001'
 
 export default defineConfig({
   plugins: [react()],
+  base: './', // Use relative paths for assets to support subfolder/Jupyter-proxy deployments
   server: {
     port: 5173,
     proxy: {

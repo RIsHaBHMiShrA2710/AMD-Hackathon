@@ -47,7 +47,7 @@ export default function WorkflowDiagram() {
   useEffect(() => {
     const fetchDiagram = async () => {
       try {
-        const res = await fetch('/api/workflow/diagram')
+        const res = await fetch('api/workflow/diagram')
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         setDiagram(data.diagram)
