@@ -8,6 +8,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script>
+      // Ensure the page is always loaded with a trailing slash if we are behind a proxy
+      // This is critical so that relative assets and API URLs resolve correctly.
+      if (window.location.pathname.includes('/proxy/8001') && !window.location.pathname.endsWith('/')) {
+        window.location.pathname = window.location.pathname + '/';
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
