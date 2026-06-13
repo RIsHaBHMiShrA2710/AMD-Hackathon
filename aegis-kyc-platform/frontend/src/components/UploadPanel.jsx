@@ -28,6 +28,15 @@ const SAMPLE_DOCUMENTS = [
   }
 ]
 
+const getBaseApiUrl = () => {
+  const path = window.location.pathname;
+  const proxyMatch = path.match(/(.*\/proxy\/8001)/);
+  if (proxyMatch) {
+    return `${proxyMatch[1].replace(/\/$/, '')}/api/`;
+  }
+  return '/api/';
+};
+
 export default function UploadPanel({
   isStreaming,
   onStreamStart,
@@ -65,7 +74,8 @@ export default function UploadPanel({
     if (!documentText.trim() || isStreaming) return
 
     try {
-      const response = await fetch('api/kyc/stream', {
+      const baseApi = getBaseApiUrl();
+      const response = await fetch(`${baseApi}kyc/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ document_text: documentText }),

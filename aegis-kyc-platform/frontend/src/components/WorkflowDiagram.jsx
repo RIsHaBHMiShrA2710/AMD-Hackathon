@@ -36,6 +36,15 @@ mermaid.initialize({
   securityLevel: 'loose',
 })
 
+const getBaseApiUrl = () => {
+  const path = window.location.pathname;
+  const proxyMatch = path.match(/(.*\/proxy\/8001)/);
+  if (proxyMatch) {
+    return `${proxyMatch[1].replace(/\/$/, '')}/api/`;
+  }
+  return '/api/';
+};
+
 export default function WorkflowDiagram() {
   const [diagram, setDiagram] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,7 +56,8 @@ export default function WorkflowDiagram() {
   useEffect(() => {
     const fetchDiagram = async () => {
       try {
-        const res = await fetch('api/workflow/diagram')
+        const baseApi = getBaseApiUrl();
+        const res = await fetch(`${baseApi}workflow/diagram`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         setDiagram(data.diagram)
