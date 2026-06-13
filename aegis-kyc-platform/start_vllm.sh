@@ -32,6 +32,6 @@ VLLM_USE_TRITON_FLASH_ATTN=0 vllm serve Qwen/Qwen3-4B \
     --api-key abc-123 \
     --port 8000 \
     --enable-auto-tool-choice \
-    --tool-call-parser Hermes \
+    --tool-call-parser hermes \
     --trust-remote-code \
     --max_model_len 24272
