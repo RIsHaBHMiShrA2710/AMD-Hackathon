@@ -1,53 +1,67 @@
 """
 AegisKYC — FastAPI Application
 ================================
-Main API server exposing three endpoints:
-  POST /api/kyc/process   — Synchronous KYC processing (full state in one response)
-  POST /api/kyc/stream    — Streaming KYC processing (NDJSON events per agent step)
-  GET  /api/workflow/diagram — Mermaid diagram of the LangGraph workflow
+Main API server exposing endpoints for KYC processing.
+In AMD AI Notebook pod mode, also serves the built React frontend
+as static files so the entire app runs from a single port (8001).
 
-Architecture notes:
-  - The compiled LangGraph is built once at startup and reused across requests
-  - Streaming uses Server-Sent Events (SSE) via StreamingResponse
-  - Each stream event is a JSON line describing one pipeline step in real time
-  - CORS is configured for the Vite dev server at localhost:5173
+Endpoints:
+  POST /api/kyc/process      — Synchronous KYC processing
+  POST /api/kyc/stream       — Streaming NDJSON KYC processing
+  GET  /api/workflow/diagram — Mermaid diagram of the LangGraph workflow
+  GET  /api/health           — Health check
+  GET  /*                    — React frontend (static, production build)
 """
 
 import asyncio
 import json
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from core.state import KYCState
-from core.llm_client import llm_client
+from core.llm_client import llm_client, VLLM_BASE_URL, DEFAULT_MODEL
 from graph.kyc_graph import build_kyc_graph, get_graph_diagram
 
-# ── Logging Configuration ──────────────────────────────────────────────────────
+# ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
 
+# ── Static frontend path ───────────────────────────────────────────────────────
+# When running in AMD pod, the React app is built first then served from here.
+# Path: aegis-kyc-platform/frontend/dist  (relative to this file's directory)
+_BACKEND_DIR = Path(__file__).parent
+_FRONTEND_DIST = _BACKEND_DIR.parent / "frontend" / "dist"
+_SERVE_FRONTEND = _FRONTEND_DIST.exists()
 
-# ── Lifespan: Build graph once at startup ─────────────────────────────────────
+
+# ── Lifespan ───────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Build and cache the compiled KYC graph at application startup."""
+    """Build the LangGraph graph once at startup, close LLM client on shutdown."""
     logger.info("AegisKYC: Building LangGraph state machine...")
     app.state.kyc_graph = build_kyc_graph()
-    logger.info("AegisKYC: Graph ready. Starting server.")
+    logger.info("AegisKYC: Graph ready.")
+    logger.info("AegisKYC: LLM endpoint = %s | model = %s", VLLM_BASE_URL, DEFAULT_MODEL)
+    if _SERVE_FRONTEND:
+        logger.info("AegisKYC: Serving React frontend from %s", _FRONTEND_DIST)
+    else:
+        logger.info("AegisKYC: No built frontend found — API-only mode (run 'npm run build' in frontend/)")
     yield
-    # Shutdown: close the LLM client's HTTP connection pool
     await llm_client.aclose()
-    logger.info("AegisKYC: LLM client closed. Shutdown complete.")
+    logger.info("AegisKYC: Shutdown complete.")
 
 
 # ── FastAPI App ────────────────────────────────────────────────────────────────
@@ -56,22 +70,23 @@ app = FastAPI(
     description="Agentic KYC Intelligence Platform — AMD ROCm Hackathon",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
 )
 
-# CORS: allow the Vite React frontend to call this API during development
+# CORS — allow local Vite dev server + wildcard for Jupyter proxy URLs
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],   # Jupyter proxy generates dynamic origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Request / Response Models ─────────────────────────────────────────────────
+# ── Request / Response Models ──────────────────────────────────────────────────
 
 class KYCRequest(BaseModel):
-    """Incoming KYC processing request."""
     document_text: str = Field(
         ...,
         min_length=10,
@@ -81,7 +96,6 @@ class KYCRequest(BaseModel):
 
 
 class KYCResponse(BaseModel):
-    """Full KYC processing result returned by the synchronous endpoint."""
     case_id: str
     final_decision: str
     confidence_score: float
@@ -93,10 +107,9 @@ class KYCResponse(BaseModel):
     stream_events: list[dict]
 
 
-# ── Helper: Build initial KYCState ────────────────────────────────────────────
+# ── Helper ─────────────────────────────────────────────────────────────────────
 
 def _initial_state(document_text: str) -> KYCState:
-    """Create a fresh KYCState for a new case."""
     return KYCState(
         case_id=str(uuid.uuid4()),
         raw_input=document_text,
@@ -111,103 +124,80 @@ def _initial_state(document_text: str) -> KYCState:
     )
 
 
-# ── POST /api/kyc/process ─────────────────────────────────────────────────────
+# ── POST /api/kyc/process ──────────────────────────────────────────────────────
 
 @app.post("/api/kyc/process", response_model=KYCResponse, tags=["KYC"])
 async def process_kyc(request: KYCRequest):
     """
-    Synchronous KYC processing endpoint.
-    Runs the full LangGraph pipeline and returns the complete final state.
-    Use this for simple integrations that don't need real-time streaming.
+    Synchronous KYC processing. Runs the full LangGraph pipeline and returns
+    the complete final state in one response.
     """
     logger.info("POST /api/kyc/process — starting new case")
     initial_state = _initial_state(request.document_text)
-
     try:
-        # ainvoke runs the full graph asynchronously and returns the final state
         final_state = await app.state.kyc_graph.ainvoke(initial_state)
-        logger.info("Case %s completed: decision=%s", final_state["case_id"], final_state["final_decision"])
+        logger.info("Case %s: decision=%s", final_state["case_id"], final_state["final_decision"])
         return KYCResponse(**final_state)
-
     except Exception as exc:
-        logger.exception("KYC processing failed for case")
+        logger.exception("KYC processing failed")
         raise HTTPException(status_code=500, detail=f"KYC processing error: {exc}")
 
 
-# ── POST /api/kyc/stream ──────────────────────────────────────────────────────
+# ── POST /api/kyc/stream ───────────────────────────────────────────────────────
 
 @app.post("/api/kyc/stream", tags=["KYC"])
 async def stream_kyc(request: KYCRequest):
     """
-    Streaming KYC processing endpoint.
-    Returns NDJSON (newline-delimited JSON) events as each agent node executes.
-    The frontend reads this stream to update the live pipeline visualization.
+    Streaming KYC processing. Returns NDJSON events as each agent node executes.
+    The frontend Live Pipeline Monitor reads this stream in real time.
 
-    Event types emitted:
-      - {"type": "case_start", "case_id": "...", "message": "..."}
-      - {"type": "node_start", "node": "...", "message": "..."}
-      - {"type": "node_progress", "node": "...", "message": "..."}
-      - {"type": "node_complete", "node": "...", "data": {...}}
-      - {"type": "node_error", "node": "...", "message": "..."}
-      - {"type": "pipeline_complete", "final_state": {...}}
-      - {"type": "pipeline_error", "error": "..."}
+    Event types:
+      case_start | node_start | node_progress | node_complete | node_error
+      pipeline_complete | pipeline_error
     """
     initial_state = _initial_state(request.document_text)
     case_id = initial_state["case_id"]
-    logger.info("POST /api/kyc/stream — case %s starting", case_id)
+    logger.info("POST /api/kyc/stream — case %s", case_id)
 
     async def event_generator() -> AsyncIterator[str]:
-        """
-        Generator that yields NDJSON lines.
-        Runs the graph via astream_events (LangGraph ≥0.2) which emits
-        fine-grained events per node rather than only per state snapshot.
-        """
-        # ── Announce case start ────────────────────────────────────────────────
+        # Announce start
         yield json.dumps({
             "type": "case_start",
             "case_id": case_id,
-            "message": f"🚀 AegisKYC pipeline initiated — Case ID: {case_id}",
-            "timestamp": initial_state.get("agent_logs", [None])[0] if initial_state.get("agent_logs") else None,
+            "message": f"AegisKYC pipeline initiated — Case ID: {case_id}",
         }) + "\n"
 
-        # Track which nodes we've already announced to deduplicate events
-        announced_nodes: set[str] = set()
         last_known_events: list[dict] = []
 
         try:
-            # astream yields state snapshots after each node completes
+            # Stream state snapshots as each node completes
             async for state_snapshot in app.state.kyc_graph.astream(initial_state):
-                # state_snapshot is a dict: { node_name: partial_state_update }
                 for node_name, partial_state in state_snapshot.items():
                     if not isinstance(partial_state, dict):
                         continue
-
-                    # Emit any new stream_events that arrived in this snapshot
                     new_events = partial_state.get("stream_events", [])
                     for event in new_events:
                         if event not in last_known_events:
                             last_known_events.append(event)
                             yield json.dumps(event) + "\n"
+                    await asyncio.sleep(0)  # yield to event loop
 
-                    # Small yield to let the event loop breathe and flush to client
-                    await asyncio.sleep(0)
-
-            # ── Retrieve final state (run sync to get completed state) ──────────
+            # Run again to get the complete merged final state
             final_state = await app.state.kyc_graph.ainvoke(initial_state)
 
             yield json.dumps({
                 "type": "pipeline_complete",
                 "case_id": case_id,
-                "message": f"✅ Pipeline complete — Decision: {final_state.get('final_decision')}",
+                "message": f"Pipeline complete — Decision: {final_state.get('final_decision')}",
                 "final_state": {
-                    "case_id": final_state.get("case_id"),
-                    "final_decision": final_state.get("final_decision"),
+                    "case_id":          final_state.get("case_id"),
+                    "final_decision":   final_state.get("final_decision"),
                     "confidence_score": final_state.get("confidence_score"),
-                    "extracted_data": final_state.get("extracted_data"),
+                    "extracted_data":   final_state.get("extracted_data"),
                     "compliance_flags": final_state.get("compliance_flags"),
-                    "audit_summary": final_state.get("audit_summary"),
-                    "security_status": final_state.get("security_status"),
-                    "agent_logs": final_state.get("agent_logs"),
+                    "audit_summary":    final_state.get("audit_summary"),
+                    "security_status":  final_state.get("security_status"),
+                    "agent_logs":       final_state.get("agent_logs"),
                 },
             }) + "\n"
 
@@ -217,45 +207,65 @@ async def stream_kyc(request: KYCRequest):
                 "type": "pipeline_error",
                 "case_id": case_id,
                 "error": str(exc),
-                "message": f"💥 Pipeline failed: {exc}",
+                "message": f"Pipeline failed: {exc}",
             }) + "\n"
 
     return StreamingResponse(
         event_generator(),
         media_type="application/x-ndjson",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # Disable Nginx buffering for streaming
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-# ── GET /api/workflow/diagram ─────────────────────────────────────────────────
+# ── GET /api/workflow/diagram ──────────────────────────────────────────────────
 
 @app.get("/api/workflow/diagram", tags=["Workflow"])
 async def get_workflow_diagram():
-    """
-    Returns the Mermaid diagram string for the KYC LangGraph workflow.
-    The frontend WorkflowDiagram component fetches this and renders it
-    using the mermaid.js library.
-    """
     return {"diagram": get_graph_diagram()}
 
 
-# ── GET /api/health ───────────────────────────────────────────────────────────
+# ── GET /api/health ────────────────────────────────────────────────────────────
 
 @app.get("/api/health", tags=["System"])
 async def health_check():
-    """Health check endpoint — verifies the API and graph are ready."""
     return {
         "status": "healthy",
         "service": "AegisKYC",
         "graph_ready": hasattr(app.state, "kyc_graph"),
-        "llm_endpoint": "http://localhost:8000/v1",
+        "llm_endpoint": VLLM_BASE_URL,
+        "llm_model": DEFAULT_MODEL,
+        "frontend_served": _SERVE_FRONTEND,
+        "frontend_path": str(_FRONTEND_DIST) if _SERVE_FRONTEND else None,
     }
+
+
+# ── Static Frontend (production mode — AMD pod) ────────────────────────────────
+# Mount AFTER all /api routes so API routes take priority.
+# Serves the built React app at everything that isn't /api/*.
+# In dev mode (no dist/ folder), this block is skipped entirely.
+
+if _SERVE_FRONTEND:
+    # Serve Vite's built assets (JS, CSS, images)
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(_FRONTEND_DIST / "assets")),
+        name="assets",
+    )
+
+    # Catch-all: serve index.html for all non-API routes (React Router support)
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        """
+        Serve the React SPA for any non-API route.
+        React Router handles client-side navigation.
+        """
+        index = _FRONTEND_DIST / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        return {"error": "Frontend not built. Run: cd frontend && npm run build"}
 
 
 # ── Dev entrypoint ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8001, reload=False)
