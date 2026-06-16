@@ -95,10 +95,21 @@ app.add_middleware(
 )
 
 
+
+class ProxyStaticFiles(StaticFiles):
+    """Custom StaticFiles handler that ignores duplicate route prefixes when running behind proxies."""
+    def get_path(self, scope) -> str:
+        route_path = super().get_path(scope)
+        normalized = route_path.replace("\\", "/")
+        for prefix in ["assets/", "sample_documents/"]:
+            if normalized.startswith(prefix):
+                return route_path[len(prefix):]
+        return route_path
+
 # Serve sample document images for OCR tab
 app.mount(
     "/sample_documents",
-    StaticFiles(directory=str(Path(__file__).parent / "mock_data" / "sample_documents")),
+    ProxyStaticFiles(directory=str(Path(__file__).parent / "mock_data" / "sample_documents")),
     name="sample_documents"
 )
 
@@ -325,7 +336,7 @@ if _SERVE_FRONTEND:
     # Serve Vite's built assets (JS, CSS, images)
     app.mount(
         "/assets",
-        StaticFiles(directory=str(_FRONTEND_DIST / "assets")),
+        ProxyStaticFiles(directory=str(_FRONTEND_DIST / "assets")),
         name="assets",
     )
 
