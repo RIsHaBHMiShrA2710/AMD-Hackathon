@@ -31,6 +31,8 @@ from pydantic import BaseModel, Field
 from core.state import KYCState
 from core.llm_client import llm_client, VLLM_BASE_URL, DEFAULT_MODEL
 from graph.kyc_graph import build_kyc_graph, get_graph_diagram
+from agents.face_match_agent import compare_faces
+
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -93,14 +95,31 @@ app.add_middleware(
 )
 
 
+# Serve sample document images for OCR tab
+app.mount(
+    "/sample_documents",
+    StaticFiles(directory=str(Path(__file__).parent / "mock_data" / "sample_documents")),
+    name="sample_documents"
+)
+
+
+
 # ── Request / Response Models ──────────────────────────────────────────────────
 
 class KYCRequest(BaseModel):
     document_text: str = Field(
         ...,
-        min_length=10,
+        min_length=0,  # Allow 0 chars if inputting via image
         description="Raw document text to process (passport, ID card, etc.)",
         examples=["Passport No: P1234567. Name: John Doe. Born: 1985-03-15. Nationality: British."],
+    )
+    input_type: str = Field(
+        default="text",
+        description="Type of input: 'text' or 'image'"
+    )
+    image_filename: str = Field(
+        default="",
+        description="Name of the preset image file"
     )
 
 
@@ -114,14 +133,42 @@ class KYCResponse(BaseModel):
     security_status: str
     agent_logs: list[str]
     stream_events: list[dict]
+    input_type: str = "text"
+    image_filename: str = ""
+    ocr_text: str = ""
+    ocr_language_detected: str = "English"
+    ocr_bilingual_match_status: str = "SKIPPED"
+    ocr_bilingual_match_score: float = 1.0
+    ocr_bilingual_match_rationale: str = ""
+
+
+class FaceMatchRequest(BaseModel):
+    doc_image_filename: str
+    selfie_image_filename: str
+
+
+class FaceMatchResponse(BaseModel):
+    verified: bool
+    score: float
+    distance: float
+    detector: str
+    reason: str
+
 
 
 # ── Helper ─────────────────────────────────────────────────────────────────────
 
-def _initial_state(document_text: str) -> KYCState:
+def _initial_state(document_text: str, input_type: str = "text", image_filename: str = "") -> KYCState:
     return KYCState(
         case_id=str(uuid.uuid4()),
         raw_input=document_text,
+        input_type=input_type,
+        image_filename=image_filename,
+        ocr_text="",
+        ocr_language_detected="English",
+        ocr_bilingual_match_status="SKIPPED",
+        ocr_bilingual_match_score=1.0,
+        ocr_bilingual_match_rationale="",
         extracted_data={},
         compliance_flags=[],
         confidence_score=0.0,
@@ -142,7 +189,7 @@ async def process_kyc(request: KYCRequest):
     the complete final state in one response.
     """
     logger.info("POST /api/kyc/process — starting new case")
-    initial_state = _initial_state(request.document_text)
+    initial_state = _initial_state(request.document_text, request.input_type, request.image_filename)
     try:
         final_state = await app.state.kyc_graph.ainvoke(initial_state)
         logger.info("Case %s: decision=%s", final_state["case_id"], final_state["final_decision"])
@@ -164,7 +211,7 @@ async def stream_kyc(request: KYCRequest):
       case_start | node_start | node_progress | node_complete | node_error
       pipeline_complete | pipeline_error
     """
-    initial_state = _initial_state(request.document_text)
+    initial_state = _initial_state(request.document_text, request.input_type, request.image_filename)
     case_id = initial_state["case_id"]
     logger.info("POST /api/kyc/stream — case %s", case_id)
 
@@ -224,6 +271,27 @@ async def stream_kyc(request: KYCRequest):
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+
+
+
+# ── POST /api/kyc/face-match ───────────────────────────────────────────────────
+
+@app.post("/api/kyc/face-match", response_model=FaceMatchResponse, tags=["KYC"])
+async def run_face_match(request: FaceMatchRequest):
+    """
+    Biometric face matching comparing face in ID document card vs customer selfie.
+    """
+    try:
+        result = await compare_faces(
+            doc_image_filename=request.doc_image_filename,
+            selfie_image_filename=request.selfie_image_filename
+        )
+        return FaceMatchResponse(**result)
+    except Exception as exc:
+        logger.exception("Face match processing failed")
+        raise HTTPException(status_code=500, detail=f"Face match error: {exc}")
 
 
 # ── GET /api/workflow/diagram ──────────────────────────────────────────────────

@@ -1,0 +1,45 @@
+[
+  {
+    "id": "preset_rahul_sharma",
+    "label": "✅ Valid Aadhaar Card (Rahul Sharma) — Clean",
+    "document_type": "NATIONAL_ID",
+    "raw_input": "GOVERNMENT OF INDIA\nUNIQUE IDENTIFICATION AUTHORITY OF INDIA\n\nTo,\nRahul Sharma\nS/O Baldev Sharma\n12, Barakhamba Road, Connaught Place,\nNew Delhi - 110001\n\nDOB: 12/08/1990\nGender: MALE\n\nYOUR AADHAAR NO:\n1234-5678-9012\n\nआधार - आम आदमी का अधिकार",
+    "image_filename": "aadhaar_rahul_sharma.png",
+    "expected_decision": "APPROVE"
+  },
+  {
+    "id": "preset_amit_kumar",
+    "label": "✅ Valid PAN Card (Amit Kumar) — Clean",
+    "document_type": "DRIVING_LICENSE",
+    "raw_input": "INCOME TAX DEPARTMENT\nGOVT. OF INDIA\n\nAMIT KUMAR\nS/O RAJESH KUMAR\n\nDOB: 20/04/1988\n\nPERMANENT ACCOUNT NUMBER\nPAN8877665\n\nSignature: Amit Kumar",
+    "image_filename": "pan_amit_kumar.png",
+    "expected_decision": "APPROVE"
+  },
+  {
+    "id": "preset_devendra_singh",
+    "label": "🚨 Bilingual Aadhaar Card (Devendra Singh) — Watchlist Alert (Fuzzy CBI Match)",
+    "document_type": "NATIONAL_ID",
+    "raw_input": "भारत सरकार\nGOVERNMENT OF INDIA\n\nदेवेन्द्र सिंह\nDevendra Singh\nजन्म तिथि / DOB: 15/01/1982\nपुरुष / MALE\n\nपता / Address:\n102, Hawa Mahal Road, J.D.A. Colony,\nJaipur, Rajasthan - 302001\n\nआधार संख्या / UID No:\n5555-6666-7777\n\nआधार - आम आदमी का अधिकार",
+    "image_filename": "aadhaar_devendra_singh.png",
+    "expected_decision": "REVIEW",
+    "flag_reason": "Fuzzy CBI Match (Devendra Singh ~ CBI watchlist: Devendra Sen, 88% match)"
+  },
+  {
+    "id": "preset_viktor_sokolov",
+    "label": "🚫 Suspended Passport (Viktor Sokolov) — High Risk Blocked",
+    "document_type": "PASSPORT",
+    "raw_input": "PASSPORT\nType: P  Code: RUS  Passport No: P1122334\nSurname: SOKOLOV\nGiven Names: VIKTOR\nNationality: RUSSIAN\nDate of birth: 15 NOV 1978\nSex: M  Place of birth: MOSCOW\nDate of issue: 10 MAY 2022  Expiry date: 10 MAY 2032\n\nP<RUSSOKOLOV<<VIKTOR<<<<<<<<<<<<<<<<<<<<<<<<<<<L1234567<6RUS7811155M3205101<<<<<<<<<<<<<<02",
+    "image_filename": "passport_viktor_sokolov.png",
+    "expected_decision": "ESCALATE",
+    "flag_reason": "Exact watchlist match (Viktor Sokolov, Risk: HIGH, Status: SUSPENDED)"
+  },
+  {
+    "id": "preset_priya_patel_tampered",
+    "label": "⚠️ Tampered Aadhaar Card (Priya Patel) — Fraud Alert (DOB Mismatch)",
+    "document_type": "NATIONAL_ID",
+    "raw_input": "भारत सरकार\nGOVERNMENT OF INDIA\n\nप्रिया पटेल\nPriya Patel\nजन्म तिथि / DOB: 05/12/1985\nमहिला / FEMALE\n\nYOUR AADHAAR NO:\n9876-5432-1098\n\nआधार - आम आदमी का अधिकार",
+    "image_filename": "aadhaar_priya_patel_tampered.png",
+    "expected_decision": "ESCALATE",
+    "flag_reason": "Document Tampering Alert: Extracted DOB (1985-12-05) does not match government registry DOB (1995-12-05) for UID 9876-5432-1098"
+  }
+]

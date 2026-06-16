@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 
-/**
- * WorkflowDiagram — Live LangGraph workflow visualization
- * 
- * Fetches the Mermaid diagram string from GET /api/workflow/diagram
- * and renders it using mermaid.js so hackathon judges can see the
- * complete agent pipeline structure at a glance.
- */
-
-// Initialize mermaid with dark theme to match the dashboard
 mermaid.initialize({
   startOnLoad: false,
   theme: 'dark',
@@ -52,7 +43,6 @@ export default function WorkflowDiagram() {
   const diagramRef = useRef(null)
   const renderedRef = useRef(false)
 
-  // Fetch diagram from backend
   useEffect(() => {
     const fetchDiagram = async () => {
       try {
@@ -71,7 +61,6 @@ export default function WorkflowDiagram() {
     fetchDiagram()
   }, [])
 
-  // Render Mermaid diagram after the container is mounted and diagram text is available
   useEffect(() => {
     if (!diagram || !diagramRef.current || renderedRef.current) return
 
@@ -92,18 +81,17 @@ export default function WorkflowDiagram() {
   }, [diagram])
 
   return (
-    <div className="glass rounded-2xl p-6 animate-fade-in">
+    <div className="glass rounded-lg p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white">Agent Workflow Diagram</h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <h2 className="text-base font-semibold text-white">Agent Workflow Diagram</h2>
+          <p className="text-xs text-slate-400 mt-1">
             Live LangGraph state machine — rendered from the running backend
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-aegis-900/40 border border-aegis-700/30 text-xs text-aegis-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-aegis-400 animate-pulse" />
-          Live from API
+        <div className="flex items-center gap-2 px-3 py-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded">
+          <span>Live from API</span>
         </div>
       </div>
 
@@ -117,25 +105,24 @@ export default function WorkflowDiagram() {
           { color: 'bg-rose-500',   label: 'PII Sanitizer' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1.5 text-xs text-slate-400">
-            <div className={`w-2.5 h-2.5 rounded-full ${color} opacity-80`} />
+            <div className={`w-2 h-2 rounded-full ${color} opacity-80`} />
             {label}
           </div>
         ))}
       </div>
 
       {/* Diagram container */}
-      <div className="mermaid-container rounded-xl bg-black/30 border border-slate-800 p-4 min-h-64 flex items-center justify-center">
+      <div className="mermaid-container rounded-lg bg-slate-950 border border-slate-800 p-4 min-h-64 flex items-center justify-center">
         {loading && (
           <div className="flex flex-col items-center gap-3 text-slate-500">
-            <div className="w-8 h-8 border-2 border-slate-700 border-t-aegis-400 rounded-full animate-spin" />
-            <span className="text-sm">Fetching workflow from backend...</span>
+            <div className="w-8 h-8 border-2 border-slate-700 border-t-indigo-500 rounded-full animate-spin" />
+            <span className="text-xs font-mono">Fetching workflow...</span>
           </div>
         )}
         {error && (
           <div className="text-center text-red-400 text-sm">
-            <div className="text-3xl mb-2">⚠️</div>
             <p>Could not render diagram</p>
-            <p className="text-xs text-slate-500 mt-1">{error}</p>
+            <p className="text-xs text-slate-500 mt-1 font-mono">{error}</p>
             <p className="text-xs text-slate-600 mt-2">Make sure the backend is running on port 8001</p>
           </div>
         )}
@@ -151,28 +138,27 @@ export default function WorkflowDiagram() {
       {/* Technical details */}
       <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Pipeline Nodes', value: '5 Agents', icon: '🔗' },
-          { label: 'Conditional Edges', value: '2 Branch Points', icon: '⚡' },
-          { label: 'LLM Calls', value: '2 (AMD GPU)', icon: '🤖' },
-        ].map(({ label, value, icon }) => (
-          <div key={label} className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 text-center">
-            <div className="text-xl mb-1">{icon}</div>
+          { label: 'Pipeline Nodes', value: '5 Agents' },
+          { label: 'Conditional Edges', value: '2 Branch Points' },
+          { label: 'LLM Calls', value: '2 (AMD GPU)' },
+        ].map(({ label, value }) => (
+          <div key={label} className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-center">
             <div className="text-sm font-semibold text-white">{value}</div>
-            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-xs text-slate-500 mt-1">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Raw diagram source (collapsible) */}
       {diagram && (
-        <details className="mt-4 group">
-          <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300 transition-colors select-none flex items-center gap-1">
+        <details className="mt-4 group border-t border-slate-800 pt-3">
+          <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-350 transition-colors select-none flex items-center gap-1 font-mono">
             <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/>
             </svg>
             View Mermaid source
           </summary>
-          <pre className="mt-2 p-3 rounded-lg bg-black/40 text-xs font-mono text-slate-400 overflow-x-auto">
+          <pre className="mt-2 p-3 rounded bg-slate-955 text-xs font-mono text-slate-400 overflow-x-auto border border-slate-800">
             {diagram}
           </pre>
         </details>

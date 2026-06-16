@@ -49,3 +49,13 @@ class KYCState(TypedDict):
     # Real-time processing events for frontend live pipeline view
     # Each event: { type, node, message, timestamp, data? }
     stream_events: list[dict]
+
+    # OCR specific metadata (for image processing path)
+    input_type: str                   # "text" | "image"
+    image_filename: str               # Selected preset image filename
+    ocr_text: str                     # Raw text output from OCR engine
+    ocr_language_detected: str        # e.g., "Hindi + English"
+    ocr_bilingual_match_status: str  # "MATCHED" | "MISMATCH" | "SKIPPED"
+    ocr_bilingual_match_score: float  # Validation confidence
+    ocr_bilingual_match_rationale: str
+

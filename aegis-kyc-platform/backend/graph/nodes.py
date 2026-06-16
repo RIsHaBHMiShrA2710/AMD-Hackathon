@@ -25,6 +25,7 @@ from core.llm_client import llm_client
 from agents.extraction_agent import run_extraction_agent
 from agents.compliance_agent import run_compliance_check
 from agents.orchestrator import run_orchestrator
+from agents.ocr_agent import run_ocr_agent
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,86 @@ def node_guardrail(state: KYCState) -> dict:
             "audit_summary": f"Guardrail node failed with exception: {exc}",
             "agent_logs": logs + [_log(node_name, f"EXCEPTION: {exc}")],
             "stream_events": events,
+        }
+
+
+# ── Node 1.5: OCR Scan ─────────────────────────────────────────────────────────
+
+async def node_ocr(state: KYCState) -> dict:
+    """
+    Multi-language OCR extraction and bilingual name validation node.
+    Only executes if input_type == "image". Otherwise, skips.
+    """
+    node_name = "ocr"
+    logs = list(state.get("agent_logs", []))
+    events = list(state.get("stream_events", []))
+
+    input_type = state.get("input_type", "text")
+    image_filename = state.get("image_filename", "")
+
+    if input_type != "image":
+        events.append(_event("node_complete", node_name, "Skipped — text input detected", {
+            "ocr_status": "SKIPPED"
+        }))
+        return {
+            "ocr_text": "",
+            "ocr_language_detected": "English",
+            "ocr_bilingual_match_status": "SKIPPED",
+            "ocr_bilingual_match_score": 1.0,
+            "ocr_bilingual_match_rationale": "No image input, skipped OCR",
+            "agent_logs": logs + [_log(node_name, "Skipped OCR because input_type is text")],
+            "stream_events": events
+        }
+
+    events.append(_event("node_start", node_name, f"📷 Activating PaddleOCR engine — scanning {image_filename} for text..."))
+    logs.append(_log(node_name, f"Starting OCR scan on image: {image_filename}"))
+
+    try:
+        events.append(_event("node_progress", node_name, "⚡ Extracting bilingual text and detecting document layout on AMD GPU..."))
+        
+        ocr_result = await run_ocr_agent(
+            image_filename=image_filename,
+            llm_client=llm_client
+        )
+        
+        lang = ocr_result["ocr_language_detected"]
+        match_status = ocr_result["bilingual_match_status"]
+        score = ocr_result["bilingual_match_score"]
+        rationale = ocr_result["bilingual_match_rationale"]
+        
+        msg = f"OCR complete. Lang: {lang}. Bilingual Cross-Validation: {match_status} (Conf: {score*100:.1f}%)"
+        logs.append(_log(node_name, msg))
+        logs.append(_log(node_name, f"Bilingual Rationale: {rationale}"))
+        
+        status_icon = "✅" if match_status == "MATCHED" else "⚠️"
+        events.append(_event("node_complete", node_name, f"{status_icon} OCR completed — {lang} text processed", {
+            "ocr_status": "COMPLETE",
+            "ocr_language_detected": lang,
+            "extracted_name": ocr_result["name_english"],
+            "bilingual_match_score": score,
+            "bilingual_match_status": match_status
+        }))
+        
+        return {
+            "raw_input": ocr_result["ocr_text"], 
+            "ocr_text": ocr_result["ocr_text"],
+            "ocr_language_detected": lang,
+            "ocr_bilingual_match_status": match_status,
+            "ocr_bilingual_match_score": score,
+            "ocr_bilingual_match_rationale": rationale,
+            "agent_logs": logs,
+            "stream_events": events
+        }
+    except Exception as exc:
+        logger.exception("node_ocr: unexpected exception")
+        events.append(_event("node_error", node_name, f"💥 OCR node failed: {exc}"))
+        return {
+            "ocr_bilingual_match_status": "ERROR",
+            "ocr_bilingual_match_score": 0.0,
+            "ocr_bilingual_match_rationale": f"OCR execution failed with exception: {exc}",
+            "final_decision": "REVIEW", 
+            "agent_logs": logs + [_log(node_name, f"EXCEPTION: {exc}")],
+            "stream_events": events
         }
 
 

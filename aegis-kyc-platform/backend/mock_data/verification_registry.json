@@ -1,0 +1,59 @@
+[
+  {
+    "document_number": "1234-5678-9012",
+    "document_type": "NATIONAL_ID",
+    "full_name": "Rahul Sharma",
+    "full_name_hindi": "राहुल शर्मा",
+    "date_of_birth": "1990-08-12",
+    "nationality": "Indian",
+    "status": "ACTIVE",
+    "address_pincode": "110001"
+  },
+  {
+    "document_number": "9876-5432-1098",
+    "document_type": "NATIONAL_ID",
+    "full_name": "Priya Patel",
+    "full_name_hindi": "प्रिया पटेल",
+    "date_of_birth": "1995-12-05",
+    "nationality": "Indian",
+    "status": "ACTIVE",
+    "address_pincode": "380009"
+  },
+  {
+    "document_number": "PAN8877665",
+    "document_type": "DRIVING_LICENSE",
+    "full_name": "Amit Kumar",
+    "date_of_birth": "1988-04-20",
+    "nationality": "Indian",
+    "status": "ACTIVE",
+    "address_pincode": "201301"
+  },
+  {
+    "document_number": "P7766554",
+    "document_type": "PASSPORT",
+    "full_name": "Amara Okonkwo",
+    "date_of_birth": "1985-05-12",
+    "nationality": "Nigerian",
+    "status": "ACTIVE",
+    "address_pincode": "999999"
+  },
+  {
+    "document_number": "P1122334",
+    "document_type": "PASSPORT",
+    "full_name": "Viktor Sokolov",
+    "date_of_birth": "1978-11-15",
+    "nationality": "Russian",
+    "status": "SUSPENDED",
+    "address_pincode": "101000"
+  },
+  {
+    "document_number": "5555-6666-7777",
+    "document_type": "NATIONAL_ID",
+    "full_name": "Devendra Singh",
+    "full_name_hindi": "देवेन्द्र सिंह",
+    "date_of_birth": "1982-01-15",
+    "nationality": "Indian",
+    "status": "ACTIVE",
+    "address_pincode": "302001"
+  }
+]

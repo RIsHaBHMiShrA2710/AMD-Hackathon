@@ -23,6 +23,7 @@ from langgraph.graph import StateGraph, END, START
 from core.state import KYCState
 from graph.nodes import (
     node_guardrail,
+    node_ocr,
     node_extraction,
     node_compliance,
     node_orchestrator,
@@ -37,17 +38,17 @@ AUTO_ESCALATE_THRESHOLD = 0.95
 
 # ── Conditional Edge Functions ────────────────────────────────────────────────
 
-def route_after_guardrail(state: KYCState) -> Literal["extraction", "__end__"]:
+def route_after_guardrail(state: KYCState) -> Literal["ocr", "__end__"]:
     """
     After the guardrail node:
       - BLOCKED → jump to END immediately (document rejected)
-      - OK      → continue to extraction
+      - OK      → continue to ocr
     """
     if state.get("security_status") == "BLOCKED":
         logger.info("Graph router: guardrail BLOCKED — jumping to END")
         return END
-    logger.info("Graph router: guardrail OK — proceeding to extraction")
-    return "extraction"
+    logger.info("Graph router: guardrail OK — proceeding to ocr")
+    return "ocr"
 
 
 def route_after_compliance(state: KYCState) -> Literal["orchestrator", "sanitizer"]:
@@ -81,6 +82,7 @@ def build_kyc_graph() -> StateGraph:
 
     # ── Register all node functions ────────────────────────────────────────────
     builder.add_node("guardrail", node_guardrail)
+    builder.add_node("ocr", node_ocr)
     builder.add_node("extraction", node_extraction)
     builder.add_node("compliance", node_compliance)
     builder.add_node("orchestrator", node_orchestrator)
@@ -91,14 +93,15 @@ def build_kyc_graph() -> StateGraph:
     # Entry point
     builder.add_edge(START, "guardrail")
 
-    # Conditional edge after guardrail (BLOCKED → END, OK → extraction)
+    # Conditional edge after guardrail (BLOCKED → END, OK → ocr)
     builder.add_conditional_edges(
         "guardrail",
         route_after_guardrail,
-        {"extraction": "extraction", END: END},
+        {"ocr": "ocr", END: END},
     )
 
-    # Linear edges: extraction → compliance
+    # Linear edges: ocr → extraction → compliance
+    builder.add_edge("ocr", "extraction")
     builder.add_edge("extraction", "compliance")
 
     # Conditional edge after compliance (high confidence → skip orchestrator)
@@ -131,7 +134,10 @@ def get_graph_diagram() -> str:
 
     G["🛡️ node_guardrail\\nPrompt Injection Shield"]
     G -- "security_status = BLOCKED" --> BLOCKED_END([🚫 END\\nDocument Rejected])
-    G -- "security_status = OK" --> E
+    G -- "security_status = OK" --> OCR
+
+    OCR["📷 node_ocr\\nMulti-Language OCR\\n(PaddleOCR on MI300X)"]
+    OCR --> E
 
     E["🔍 node_extraction\\nLLM Field Extractor\\n(AMD GPU)"]
     E --> C
@@ -149,6 +155,7 @@ def get_graph_diagram() -> str:
 
     style START fill:#1a1a2e,stroke:#4a90d9,color:#fff
     style G fill:#2d1b69,stroke:#7c5cbf,color:#fff
+    style OCR fill:#0f3844,stroke:#00a3c4,color:#fff
     style E fill:#1a3a5c,stroke:#4a90d9,color:#fff
     style C fill:#2d2d00,stroke:#d4a017,color:#fff
     style O fill:#1a3a1a,stroke:#4caf50,color:#fff

@@ -1,29 +1,16 @@
 import { useState, useRef } from 'react'
 
-/**
- * UploadPanel — Document submission interface
- * 
- * Provides a textarea for pasting document text and a file upload button.
- * On submit, opens a streaming NDJSON connection to POST /api/kyc/stream
- * and feeds each line as a parsed event to the parent via callbacks.
- * 
- * Stream reading strategy:
- *   - Uses fetch() with ReadableStream + TextDecoder for native NDJSON parsing
- *   - Processes line-by-line so partial chunks are buffered correctly
- *   - Each complete JSON line is parsed and dispatched as an event object
- */
-
 const SAMPLE_DOCUMENTS = [
   {
-    label: "✅ Clean Passport",
+    label: "Clean Passport",
     text: "PASSPORT\nSurname: THOMPSON\nGiven Names: ALICE MARIE\nNationality: UNITED STATES\nDate of Birth: 12 SEP 1990\nSex: F\nPlace of Birth: NEW YORK\nDate of Issue: 05 MAR 2020\nDate of Expiry: 04 MAR 2030\nPassport No: US98765432\nPersonal No: 123456789"
   },
   {
-    label: "🚨 Sanctioned Entity",
+    label: "Sanctioned Entity",
     text: "IDENTIFICATION DOCUMENT\nFull Name: Viktor Sokolov\nDate of Birth: 1978-11-22\nNationality: Russian Federation\nDocument Type: National ID\nDocument Number: RU-44556677\nIssued By: Federal Migration Service\nValid Until: 2028-12-31"
   },
   {
-    label: "🟡 Review Case",
+    label: "Review Case",
     text: "DRIVING LICENSE\nName: James Victor Volkov\nDOB: March 3, 1985\nCountry: Ukraine\nLicense No: UA-DL-9988776\nCategory: B, C\nIssued: 2019-01-15\nExpiry: 2029-01-14\nAddress: 14 Kyiv Street, Kyiv"
   }
 ]
@@ -48,7 +35,6 @@ export default function UploadPanel({
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
 
-  // ── File Upload Handler ────────────────────────────────────────────────────
   const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -57,7 +43,6 @@ export default function UploadPanel({
     reader.readAsText(file)
   }
 
-  // ── Drag & Drop ────────────────────────────────────────────────────────────
   const handleDrop = (e) => {
     e.preventDefault()
     setIsDragging(false)
@@ -69,7 +54,6 @@ export default function UploadPanel({
     }
   }
 
-  // ── NDJSON Stream Reader ───────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!documentText.trim() || isStreaming) return
 
@@ -94,12 +78,8 @@ export default function UploadPanel({
         const { done, value } = await reader.read()
         if (done) break
 
-        // Decode the chunk and add to buffer
         buffer += decoder.decode(value, { stream: true })
-
-        // Process all complete lines (NDJSON = one JSON object per line)
         const lines = buffer.split('\n')
-        // Keep the last potentially incomplete line in the buffer
         buffer = lines.pop() || ''
 
         for (const line of lines) {
@@ -109,7 +89,6 @@ export default function UploadPanel({
           try {
             const event = JSON.parse(trimmed)
 
-            // Announce case start on first event
             if (!caseStarted && event.case_id) {
               onStreamStart(event.case_id)
               caseStarted = true
@@ -120,7 +99,6 @@ export default function UploadPanel({
 
             onStreamEvent(event)
 
-            // Pipeline complete — extract final state
             if (event.type === 'pipeline_complete') {
               onStreamComplete(event.final_state)
             } else if (event.type === 'pipeline_error') {
@@ -137,15 +115,12 @@ export default function UploadPanel({
   }
 
   return (
-    <div className="glass rounded-2xl p-6 animate-fade-in">
+    <div className="glass rounded-xl p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Document Submission</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Paste or upload a KYC document for AI-powered analysis</p>
-        </div>
-        <div className="w-8 h-8 rounded-lg bg-aegis-900/50 border border-aegis-700/30 flex items-center justify-center text-lg">
-          📋
+          <h2 className="text-base font-semibold text-white">Document Submission</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Paste or upload a KYC document for analysis</p>
         </div>
       </div>
 
@@ -158,7 +133,7 @@ export default function UploadPanel({
             id={`sample-doc-${i}`}
             onClick={() => setDocumentText(doc.text)}
             disabled={isStreaming}
-            className="text-xs px-2.5 py-1 rounded-full border border-slate-700 text-slate-300 hover:border-aegis-500 hover:text-aegis-300 transition-colors disabled:opacity-50"
+            className="text-xs px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 hover:border-indigo-500 hover:text-indigo-400 transition-colors disabled:opacity-50"
           >
             {doc.label}
           </button>
@@ -167,10 +142,10 @@ export default function UploadPanel({
 
       {/* Text Area */}
       <div
-        className={`relative rounded-xl border-2 transition-all duration-200 ${
+        className={`relative rounded-lg border transition-all duration-150 ${
           isDragging
-            ? 'border-aegis-400 bg-aegis-900/30'
-            : 'border-slate-700 hover:border-slate-600'
+            ? 'border-indigo-500 bg-slate-900'
+            : 'border-slate-800 hover:border-slate-700'
         }`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
         onDragLeave={() => setIsDragging(false)}
@@ -181,14 +156,12 @@ export default function UploadPanel({
           value={documentText}
           onChange={(e) => setDocumentText(e.target.value)}
           disabled={isStreaming}
-          placeholder="Paste document text here... (passport, national ID, driving license)
-
-Or drag & drop a .txt file"
-          className="w-full h-52 px-4 py-3 bg-transparent text-sm text-slate-200 placeholder-slate-600 font-mono resize-none outline-none disabled:opacity-50"
+          placeholder="Paste document text here... (passport, national ID, driving license)"
+          className="w-full h-52 px-4 py-3 bg-transparent text-sm text-slate-250 placeholder-slate-600 font-mono resize-none outline-none disabled:opacity-50"
         />
         {isDragging && (
-          <div className="absolute inset-0 rounded-xl flex items-center justify-center bg-aegis-900/60 backdrop-blur-sm">
-            <span className="text-aegis-300 font-medium">Drop file here</span>
+          <div className="absolute inset-0 rounded-lg flex items-center justify-center bg-slate-905/90 backdrop-blur-sm">
+            <span className="text-indigo-400 font-medium">Drop file here</span>
           </div>
         )}
       </div>
@@ -205,9 +178,8 @@ Or drag & drop a .txt file"
           id="file-upload-btn"
           onClick={() => fileInputRef.current?.click()}
           disabled={isStreaming}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm hover:border-slate-500 hover:text-white transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm hover:border-slate-500 hover:text-white transition-all disabled:opacity-50"
         >
-          <span>📁</span>
           <span>Upload File</span>
         </button>
         <input
@@ -223,7 +195,7 @@ Or drag & drop a .txt file"
           id="clear-btn"
           onClick={() => setDocumentText('')}
           disabled={isStreaming || !documentText}
-          className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-400 text-sm hover:border-slate-500 transition-all disabled:opacity-40"
+          className="px-4 py-2.5 rounded-lg border border-slate-700 text-slate-400 text-sm hover:border-slate-500 transition-all disabled:opacity-40"
         >
           Clear
         </button>
@@ -233,10 +205,10 @@ Or drag & drop a .txt file"
           id="submit-kyc-btn"
           onClick={handleSubmit}
           disabled={isStreaming || !documentText.trim()}
-          className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-150 ${
             isStreaming || !documentText.trim()
-              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-aegis-600 to-purple-600 text-white hover:from-aegis-500 hover:to-purple-500 shadow-lg hover:shadow-aegis-500/25 active:scale-95'
+              ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+              : 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.98]'
           }`}
         >
           {isStreaming ? (
@@ -249,7 +221,6 @@ Or drag & drop a .txt file"
             </>
           ) : (
             <>
-              <span>⚡</span>
               <span>Run KYC Analysis</span>
             </>
           )}

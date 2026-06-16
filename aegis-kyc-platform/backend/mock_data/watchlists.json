@@ -33,5 +33,12 @@
     "risk_tier": "MEDIUM",
     "country": "NG",
     "reason": "Flagged for Politically Exposed Person (PEP) status — Level 2"
+  },
+  {
+    "id": "WL-006",
+    "names": ["Devendra Sen", "Devendra S.", "D. Sen"],
+    "risk_tier": "HIGH",
+    "country": "IN",
+    "reason": "Designated by CBI for major financial sector security fraud"
   }
 ]
