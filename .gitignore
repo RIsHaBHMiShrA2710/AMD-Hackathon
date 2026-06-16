@@ -73,3 +73,7 @@ coverage.xml
 
 # Windows batch temporary files
 *.tmp
+
+# Exclude built frontend files from ignore patterns so they are tracked in Git
+!aegis-kyc-platform/frontend/dist/
+!aegis-kyc-platform/frontend/dist/**
