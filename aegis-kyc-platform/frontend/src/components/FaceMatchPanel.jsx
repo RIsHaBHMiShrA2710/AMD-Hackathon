@@ -14,7 +14,8 @@ const SELFIE_PRESETS = [
   { label: "Amit Kumar (Selfie - Matching)", filename: "selfie_amit_kumar.png" },
   { label: "Devendra Singh (Selfie - Matching)", filename: "selfie_devendra_singh.png" },
   { label: "Viktor Sokolov (Selfie - Matching)", filename: "selfie_viktor_sokolov.png" },
-  { label: "Priya Patel (Selfie - Matching)", filename: "selfie_priya_patel.png" }
+  { label: "Priya Patel (Selfie - Matching)", filename: "selfie_priya_patel.png" },
+  { label: "Devendra Singh (Selfie - Biometric Mismatch/Different Person for Rahul ID)", filename: "selfie_devendra_singh.png" }
 ]
 
 const getSampleDocumentsUrl = () => {

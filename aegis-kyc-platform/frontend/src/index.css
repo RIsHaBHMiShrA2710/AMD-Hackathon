@@ -101,3 +101,24 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+
+/* ── Pipeline Traveling Pulse Animation ───────────────────────────────────── */
+@keyframes travel-down {
+  0% {
+    transform: translate(-50%, -8px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 16px);
+    opacity: 0;
+  }
+}
+.animate-travel {
+  animation: travel-down 1.5s infinite linear;
+}

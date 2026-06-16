@@ -46,7 +46,7 @@ VLLM_BASE_URL: str = (
 #                                  or: mistralai/Mistral-7B-Instruct-v0.3
 DEFAULT_MODEL: str = os.getenv(
     "LLM_MODEL",
-    "meta-llama/Llama-3.1-8B-Instruct",
+    "Qwen3-4B",
 )
 
 # API key for authenticated cloud endpoints

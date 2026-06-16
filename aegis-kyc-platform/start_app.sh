@@ -63,5 +63,10 @@ echo "  Health:   ${BASE_URL}/api/health"
 echo "  ============================================================"
 echo ""
 
+if [ ! -f "$BACKEND_DIR/.env" ]; then
+    echo "  [INFO] .env file not found. Auto-creating from .env.amd template..."
+    cp "$BACKEND_DIR/.env.amd" "$BACKEND_DIR/.env"
+fi
+
 cd "$BACKEND_DIR"
 python -m uvicorn app:app --host 0.0.0.0 --port 8001 --workers 1

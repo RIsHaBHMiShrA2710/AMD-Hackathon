@@ -13,6 +13,48 @@ const COLOR_CLASSES = {
   slate: { bg: 'bg-slate-900', border: 'border-slate-800', text: 'text-slate-200', active: 'border-indigo-500' }
 }
 
+const getNodeGlowClass = (nodeId, status, data) => {
+  if (status === 'waiting') return 'bg-slate-950 border-slate-900 opacity-40';
+  if (status === 'skipped') return 'bg-slate-950 border-slate-900 opacity-30';
+  if (status === 'active') return 'bg-slate-900 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.25)] border-l-2';
+  
+  if (status === 'error') return 'bg-red-950/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-l-2';
+  
+  // For completed nodes, customize glow based on their data
+  if (status === 'complete') {
+    if (nodeId === 'guardrail') {
+      if (data?.security_status === 'BLOCKED') return 'bg-red-950/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-l-2';
+      return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+    }
+    
+    if (nodeId === 'ocr') {
+      if (data?.bilingual_match_status === 'MISMATCH') return 'bg-amber-950/25 border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] border-l-2';
+      return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+    }
+    
+    if (nodeId === 'compliance') {
+      if (data?.flags_count > 0) {
+        return 'bg-red-950/20 border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-l-2';
+      }
+      return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+    }
+    
+    if (nodeId === 'orchestrator') {
+      if (data?.decision === 'APPROVE') return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+      if (data?.decision === 'REVIEW') return 'bg-amber-950/25 border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] border-l-2';
+      return 'bg-red-950/20 border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-l-2'; // ESCALATE
+    }
+
+    if (nodeId === 'sanitizer') {
+      return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+    }
+    
+    // Default complete
+    return 'bg-emerald-950/25 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] border-l-2';
+  }
+  return 'bg-slate-900 border-slate-800';
+}
+
 function NodeIcon({ type, className }) {
   switch (type) {
     case 'Shield':
@@ -150,24 +192,13 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
           {PIPELINE_NODES.map((node, index) => {
             const { status, message, data } = getNodeState(node.id)
             const colors = COLOR_CLASSES[node.color]
-
             return (
               <div key={node.id} className="relative">
                 {/* Node Box */}
-                <div className={`p-4 rounded-lg border transition-all duration-205 ${
-                  status === 'waiting'
-                    ? 'bg-slate-950 border-slate-900 opacity-40'
-                    : status === 'active'
-                      ? `bg-slate-900 ${colors.active} border border-l-2`
-                      : status === 'complete'
-                        ? 'bg-slate-900 border-slate-800'
-                        : status === 'skipped'
-                          ? 'bg-slate-950 border-slate-900 opacity-30'
-                          : 'bg-red-950/20 border-red-900 border-l-2'
-                }`}>
+                <div className={`p-4 rounded-lg border transition-all duration-300 ${getNodeGlowClass(node.id, status, data)}`}>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="flex items-start gap-3">
-                      <NodeIcon type={node.icon} className={`w-5 h-5 mt-0.5 ${status === 'waiting' ? 'text-slate-650' : 'text-slate-400'}`} />
+                      <NodeIcon type={node.icon} className={`w-5 h-5 mt-0.5 ${status === 'waiting' ? 'text-slate-600' : 'text-slate-400'}`} />
                       <div>
                         <div className="flex items-center gap-2">
                           <span className={`font-semibold text-sm ${status === 'waiting' ? 'text-slate-500' : 'text-white'}`}>
@@ -176,7 +207,7 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                           <span className="text-[10px] uppercase font-mono text-slate-500">[{node.id}]</span>
                         </div>
                         <p className={`text-xs mt-1 font-mono ${
-                          status === 'active' ? 'text-indigo-400 animate-pulse' : 'text-slate-405'
+                          status === 'active' ? 'text-indigo-400 animate-pulse' : 'text-slate-400'
                         }`}>
                           {message}
                         </p>
@@ -186,50 +217,60 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                     {/* Status badge */}
                     <div className="flex-shrink-0 flex items-center gap-2">
                       {status === 'waiting' && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-500">QUEUED</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-550 border border-slate-700/50">QUEUED</span>
                       )}
                       {status === 'active' && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-indigo-400 border border-slate-700 animate-pulse">RUNNING</span>
                       )}
                       {status === 'complete' && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">COMPLETE</span>
+                        <>
+                          {getNodeGlowClass(node.id, status, data).includes('emerald') && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-450 border border-emerald-900/60">VERIFIED</span>
+                          )}
+                          {getNodeGlowClass(node.id, status, data).includes('amber') && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-955/40 text-amber-400 border border-amber-900/60">WARNING</span>
+                          )}
+                          {getNodeGlowClass(node.id, status, data).includes('red') && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-red-955/40 text-red-400 border border-red-900/60">ESCALATED</span>
+                          )}
+                        </>
                       )}
                       {status === 'skipped' && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-950 text-slate-600">SKIPPED</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-950 text-slate-600 border border-slate-850">SKIPPED</span>
                       )}
                       {status === 'error' && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-900">FLAGGED</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-red-955/40 text-red-405 border border-red-900/60">FAILED</span>
                       )}
                     </div>
                   </div>
 
                   {/* Contextual Data Snippet */}
                   {status === 'complete' && data && Object.keys(data).length > 0 && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-wrap gap-2 text-[10px] font-mono">
+                    <div className="mt-2.5 pt-2 border-t border-slate-800/65 flex flex-wrap gap-2 text-[10px] font-mono">
                       {data.ocr_language_detected && (
-                        <span className="text-slate-450">OCR Lang: <span className="text-indigo-400">{data.ocr_language_detected}</span></span>
+                        <span className="text-slate-400">OCR Lang: <span className="text-indigo-450">{data.ocr_language_detected}</span></span>
                       )}
                       {data.bilingual_match_status && (
-                        <span className="text-slate-450">Bilingual Match: <span className={
-                          data.bilingual_match_status === 'MATCHED' ? 'text-emerald-450 font-bold' : 'text-red-400 font-bold'
+                        <span className="text-slate-400">Bilingual Match: <span className={
+                          data.bilingual_match_status === 'MATCHED' ? 'text-emerald-400 font-bold' : 'text-red-450 font-bold'
                         }>{data.bilingual_match_status}</span></span>
                       )}
                       {data.security_status && (
-                        <span className="text-slate-455">Security: <span className="text-emerald-450">{data.security_status}</span></span>
+                        <span className="text-slate-400">Security: <span className="text-emerald-400">{data.security_status}</span></span>
                       )}
                       {data.extracted_name && (
-                        <span className="text-slate-450">Name: <span className="text-indigo-400">"{data.extracted_name}"</span></span>
+                        <span className="text-slate-400">Name: <span className="text-indigo-400">"{data.extracted_name}"</span></span>
                       )}
                       {data.doc_type && (
-                        <span className="text-slate-450">Type: <span className="text-indigo-400">{data.doc_type}</span></span>
+                        <span className="text-slate-400">Type: <span className="text-indigo-400">{data.doc_type}</span></span>
                       )}
                       {data.flags_count !== undefined && (
-                        <span className="text-slate-450">Flags: <span className={data.flags_count > 0 ? "text-red-405" : "text-emerald-450"}>{data.flags_count}</span></span>
+                        <span className="text-slate-400">Flags: <span className={data.flags_count > 0 ? "text-red-400" : "text-emerald-450"}>{data.flags_count}</span></span>
                       )}
                       {data.decision && (
-                        <span className="text-slate-450">Decision: <span className={
-                          data.decision === 'APPROVE' ? 'text-emerald-450 font-bold' :
-                          data.decision === 'REVIEW'  ? 'text-amber-450 font-bold' : 'text-red-405'
+                        <span className="text-slate-400">Decision: <span className={
+                          data.decision === 'APPROVE' ? 'text-emerald-400 font-bold' :
+                          data.decision === 'REVIEW'  ? 'text-amber-450 font-bold' : 'text-red-400 font-bold'
                         }>{data.decision}</span></span>
                       )}
                     </div>
@@ -239,9 +280,16 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                 {/* Connector line */}
                 {index < PIPELINE_NODES.length - 1 && (
                   <div className="flex justify-center -my-2 h-4 relative z-0">
-                    <div className={`w-0.5 h-full ${
-                      getNodeState(node.id).status === 'complete' ? 'bg-indigo-500' : 'bg-slate-800'
-                    }`} />
+                    <div className={`w-0.5 h-full relative ${
+                      getNodeState(node.id).status === 'complete' 
+                        ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
+                        : 'bg-slate-800'
+                    }`}>
+                      {/* Traveling pulse if the next node is active or loading */}
+                      {getNodeState(node.id).status === 'complete' && getNodeState(PIPELINE_NODES[index + 1].id).status === 'active' && (
+                        <div className="absolute left-1/2 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8] animate-travel" />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
