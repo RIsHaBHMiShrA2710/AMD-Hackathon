@@ -182,6 +182,7 @@ export default function KYCWizard() {
   const [isRunning, setIsRunning] = useState(false)
   const [isVerifyingFace, setIsVerifyingFace] = useState(false)
   const [ocrData, setOcrData] = useState(null)
+  const [pipelineErrorMsg, setPipelineErrorMsg] = useState(null)
 
   const preset = OCR_PRESETS[presetIdx]
   const imgBase = getSampleUrl()
@@ -214,6 +215,7 @@ export default function KYCWizard() {
     setFinalState(null)
     setFaceResult(null)
     setOcrData(null)
+    setPipelineErrorMsg(null)
     setStages(INITIAL_STAGES)
     setStep(2)
 
@@ -234,76 +236,114 @@ export default function KYCWizard() {
       const reader = response.body.getReader()
       const decoder = new TextDecoder('utf-8')
       let buffer = ''
+      let done = false
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
+      while (!done) {
+        const chunk = await reader.read()
+        done = chunk.done
+        if (chunk.value) buffer += decoder.decode(chunk.value, { stream: true })
+
         const lines = buffer.split('\n')
         buffer = lines.pop() || ''
 
         for (const line of lines) {
           const trimmed = line.trim()
           if (!trimmed) continue
-          try {
-            const event = JSON.parse(trimmed)
 
-            if (event.type === 'node_start' || event.type === 'node_progress') {
-              const n = event.node
-              // Actual node names from nodes.py: 'guardrail', 'ocr', 'extraction', 'compliance', 'orchestrator', 'sanitizer'
-              if (n === 'ocr') updateStage('ocr', { status: 'active', message: 'Reading text...' })
-              if (n === 'extraction') {
-                updateStage('ocr', { status: 'active', message: 'Parsing fields...' })
-              }
-              if (n === 'compliance') {
-                setStages(prev => prev.map(s => {
-                  if (s.id === 'ocr' && s.status !== 'failed') return { ...s, status: 'success', message: 'Done' }
-                  if (s.id === 'compliance') return { ...s, status: 'active', message: 'Screening...' }
-                  return s
-                }))
-              }
-              if (n === 'orchestrator') {
-                setStages(prev => prev.map(s => {
-                  if (s.id === 'compliance' && s.status !== 'warning' && s.status !== 'failed') return { ...s, status: 'success', message: 'Clear' }
-                  return s
-                }))
-              }
+          let event
+          try { event = JSON.parse(trimmed) } catch { continue } // skip malformed JSON only
+
+          // ── Node state transitions ─────────────────────────────────────
+          if (event.type === 'node_start' || event.type === 'node_progress') {
+            const n = event.node
+            // Real node names from nodes.py: guardrail | ocr | extraction | compliance | orchestrator | sanitizer
+            if (n === 'ocr') {
+              updateStage('ocr', { status: 'active', message: 'Reading text...' })
             }
-
-            if (event.type === 'node_complete') {
-              const n = event.node
-              if (n === 'ocr') updateStage('ocr', { status: 'success', message: 'Extracted' })
-              if (n === 'extraction') updateStage('ocr', { status: 'success', message: 'Fields parsed' })
-              if (n === 'compliance') {
-                const flagCount = event.data?.flags_count ?? 0
-                updateStage('compliance', {
-                  status: flagCount > 0 ? 'warning' : 'success',
-                  message: flagCount > 0 ? `${flagCount} flag(s)` : 'Clear'
-                })
-              }
-            }
-
-            if (event.type === 'pipeline_complete') {
-              const fs = event.final_state
-              setFinalState(fs)
-              setOcrData(fs)
-              // Ensure any stage not yet completed gets finalized
+            if (n === 'extraction') {
+              // OCR done, now parsing fields
               setStages(prev => prev.map(s => {
-                if (s.id === 'ocr' && s.status === 'idle') return { ...s, status: 'success', message: 'Done' }
-                if (s.id === 'compliance' && s.status === 'idle') return { ...s, status: 'success', message: 'Clear' }
+                if (s.id === 'ocr' && s.status === 'active') return { ...s, status: 'success', message: 'Text read' }
                 return s
               }))
-              updateStage('face', { status: 'idle', message: '' })
-              updateStage('decision', { status: 'idle', message: '' })
-              setStep(3)
             }
+            if (n === 'compliance') {
+              // Extraction done — now screen compliance
+              setStages(prev => prev.map(s => {
+                if (s.id === 'ocr' && s.status !== 'failed') return { ...s, status: 'success', message: 'Done' }
+                if (s.id === 'compliance') return { ...s, status: 'active', message: 'Screening...' }
+                return s
+              }))
+            }
+            if (n === 'orchestrator') {
+              // Compliance done
+              setStages(prev => prev.map(s => {
+                if (s.id === 'compliance' && s.status === 'active') return { ...s, status: 'success', message: 'Clear' }
+                return s
+              }))
+            }
+          }
 
-            if (event.type === 'pipeline_error') throw new Error(event.error || 'Pipeline failed')
-          } catch (parseErr) { /* skip bad lines */ }
+          if (event.type === 'node_complete') {
+            const n = event.node
+            if (n === 'ocr') {
+              updateStage('ocr', { status: 'success', message: 'Extracted' })
+            }
+            if (n === 'extraction') {
+              // Fields fully parsed — OCR stage finalized
+              updateStage('ocr', { status: 'success', message: 'Fields parsed' })
+            }
+            if (n === 'compliance') {
+              const flagCount = event.data?.flags_count ?? 0
+              updateStage('compliance', {
+                status: flagCount > 0 ? 'warning' : 'success',
+                message: flagCount > 0 ? `${flagCount} flag(s)` : 'Clear'
+              })
+            }
+            if (n === 'guardrail' && event.data?.security_status === 'BLOCKED') {
+              updateStage('ocr', { status: 'failed', message: 'Blocked' })
+              updateStage('compliance', { status: 'failed', message: 'Skipped' })
+            }
+          }
+
+          if (event.type === 'node_error') {
+            const n = event.node
+            if (n === 'ocr') updateStage('ocr', { status: 'warning', message: 'OCR fallback' })
+            if (n === 'extraction') updateStage('ocr', { status: 'warning', message: 'Partial extract' })
+          }
+
+          // ── Pipeline terminal events ───────────────────────────────────
+          if (event.type === 'pipeline_complete') {
+            const fs = event.final_state
+            setFinalState(fs)
+            setOcrData(fs)
+            // Finalize any stages left in idle/active (pipeline completed fully)
+            setStages(prev => prev.map(s => {
+              if ((s.id === 'ocr' || s.id === 'compliance') && (s.status === 'idle' || s.status === 'active'))
+                return { ...s, status: 'success', message: 'Done' }
+              return s
+            }))
+            updateStage('face', { status: 'idle', message: '' })
+            updateStage('decision', { status: 'idle', message: '' })
+            setStep(3)
+            done = true // exit loop early
+          }
+
+          // ── pipeline_error: do NOT throw inside inner try — use a flag ─
+          if (event.type === 'pipeline_error') {
+            const msg = event.error || event.message || 'Pipeline failed unexpectedly'
+            setPipelineErrorMsg(msg)
+            updateStage('ocr', { status: 'failed', message: 'Error' })
+            updateStage('compliance', { status: 'failed', message: 'Aborted' })
+            setIsRunning(false)
+            done = true // exit loop
+          }
         }
       }
     } catch (err) {
-      updateStage('ocr', { status: 'failed', message: err.message })
+      const msg = err.message || 'Network error'
+      setPipelineErrorMsg(msg)
+      updateStage('ocr', { status: 'failed', message: 'Failed' })
       updateStage('compliance', { status: 'failed', message: 'Aborted' })
     } finally {
       setIsRunning(false)
@@ -362,6 +402,7 @@ export default function KYCWizard() {
     setFaceResult(null)
     setOcrData(null)
     setSelfieMode('match')
+    setPipelineErrorMsg(null)
   }
 
   return (
@@ -421,12 +462,32 @@ export default function KYCWizard() {
         </div>
       )}
 
-      {/* ── Step 2: Processing ─────────────────────────────────────────── */}
+      {/* ── Step 2: Processing / Error ────────────────────────────────── */}
       {step === 2 && (
         <div className="glass rounded-xl p-8 flex flex-col items-center justify-center gap-4 min-h-48 animate-fade-in">
-          <div className="w-10 h-10 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
-          <div className="text-sm font-semibold text-sky-400">Running KYC Pipeline...</div>
-          <div className="text-xs text-slate-500 font-mono">OCR → Entity Extraction → Compliance Screening</div>
+          {pipelineErrorMsg ? (
+            // Error state
+            <>
+              <div className="w-12 h-12 rounded-full bg-red-950/40 border border-red-700 flex items-center justify-center text-red-400 text-xl">✕</div>
+              <div className="text-sm font-semibold text-red-300">Pipeline Error</div>
+              <div className="text-xs text-slate-400 font-mono text-center max-w-sm bg-slate-900 border border-slate-800 rounded-lg p-3 leading-relaxed">
+                {pipelineErrorMsg}
+              </div>
+              <button
+                onClick={handleReset}
+                className="mt-2 px-5 py-2 rounded-lg border border-slate-700 text-slate-300 text-sm hover:border-slate-500 hover:text-white transition-all"
+              >
+                ← Try Again
+              </button>
+            </>
+          ) : (
+            // Running state
+            <>
+              <div className="w-10 h-10 rounded-full border-2 border-sky-500/30 border-t-sky-500 animate-spin" />
+              <div className="text-sm font-semibold text-sky-400">Running KYC Pipeline...</div>
+              <div className="text-xs text-slate-500 font-mono">Document Scan → OCR Extract → Compliance Screening</div>
+            </>
+          )}
         </div>
       )}
 
