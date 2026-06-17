@@ -6,6 +6,10 @@
 :root {
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --accent: #0ea5e9;        /* sky-500 — primary accent, no purple */
+  --accent-dark: #0284c7;   /* sky-600 */
+  --accent-glow: rgba(14, 165, 233, 0.25);
+  --accent-glow-strong: rgba(14, 165, 233, 0.45);
 }
 
 * {
@@ -21,80 +25,48 @@ html, body, #root {
 
 body {
   font-family: var(--font-sans);
-  background-color: #0b0f19;
+  background-color: #080d15;
   color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Professional Scrollbar Styling ────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0b0f19;
-}
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+/* ── Professional Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0b0f19; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-/* ── Clean Card & Container Borders ────────────────────────────────────────── */
+/* ── Card & Container ───────────────────────────────────────────────────── */
 .glass {
-  background: #111827;
-  border: 1px solid #1f2937;
+  background: #0f1623;
+  border: 1px solid #1a2332;
 }
 
-/* ── Flat UI Elements ─────────────────────────────────────────────────────── */
+/* ── No gradient text, pure white ──────────────────────────────────────── */
 .gradient-text {
   color: #ffffff;
 }
 
-.amd-shimmer {
-  background: #1e293b;
-  border: 1px solid #334155;
-}
-
-/* ── Pipeline Node Connector Lines ───────────────────────────────────────── */
-.pipeline-connector {
-  width: 2px;
-  background: #334155;
-  opacity: 0.8;
-}
-.pipeline-connector.active {
-  background: #4f46e5;
-  opacity: 1;
-}
-
-/* ── Mermaid Diagram Overrides ────────────────────────────────────────────── */
-.mermaid-container .mermaid svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* ── Decision Badge (Clean Flat Designs) ──────────────────────────────────── */
-.decision-approve { 
-  background: #064e3b;
-  border: 1px solid #059669;
+/* ── Decision Badges ────────────────────────────────────────────────────── */
+.decision-approve {
+  background: #052e16;
+  border: 1px solid #16a34a;
 }
 .decision-review {
-  background: #78350f;
-  border: 1px solid #d97706;
+  background: #1c1003;
+  border: 1px solid #ca8a04;
 }
 .decision-escalate {
-  background: #7f1d1d;
+  background: #1a0a0a;
   border: 1px solid #dc2626;
 }
 
-/* ── Typing cursor animation for streaming text ───────────────────────────── */
+/* ── Typing cursor ──────────────────────────────────────────────────────── */
 .typing-cursor::after {
   content: '▊';
   animation: blink 0.7s step-end infinite;
-  color: #6366f1;
+  color: var(--accent);
   margin-left: 2px;
 }
 @keyframes blink {
@@ -102,23 +74,79 @@ body {
   50% { opacity: 0; }
 }
 
-/* ── Pipeline Traveling Pulse Animation ───────────────────────────────────── */
-@keyframes travel-down {
-  0% {
-    transform: translate(-50%, -8px);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, 16px);
-    opacity: 0;
-  }
+/* ══════════════════════════════════════════════════════════════════════════
+   PIPELINE STAGE TRACKER ANIMATIONS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Active stage: pulsing outer ring */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow-strong); }
+  70%  { box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
 }
-.animate-travel {
-  animation: travel-down 1.5s infinite linear;
+.stage-active-ring {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+/* Connector fill animation — left to right */
+@keyframes fill-right {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.connector-fill {
+  animation: fill-right 0.6s ease-out forwards;
+}
+
+/* Shake on error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-4px); }
+  40%       { transform: translateX(4px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(2px); }
+}
+.stage-error-shake {
+  animation: shake 0.45s ease-out;
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+/* Slide up reveal */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out both;
+}
+
+/* Spinner — standard */
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* Glow pulse for active stage icon */
+@keyframes icon-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--accent)); }
+  50%       { filter: drop-shadow(0 0 12px var(--accent)); }
+}
+.stage-icon-glow {
+  animation: icon-glow 1.4s ease-in-out infinite;
+}
+
+/* Success checkmark draw */
+@keyframes draw-check {
+  from { stroke-dashoffset: 40; }
+  to   { stroke-dashoffset: 0; }
+}
+.animate-check {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: draw-check 0.4s ease-out 0.1s forwards;
 }

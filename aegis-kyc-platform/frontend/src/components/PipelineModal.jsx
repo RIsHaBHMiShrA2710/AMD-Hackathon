@@ -10,13 +10,13 @@ const PIPELINE_NODES = [
 ]
 
 const COLOR_CLASSES = {
-  slate: { bg: 'bg-slate-900', border: 'border-slate-800', text: 'text-slate-200', active: 'border-indigo-500' }
+  slate: { bg: 'bg-slate-900', border: 'border-slate-800', text: 'text-slate-200', active: 'border-sky-500' }
 }
 
 const getNodeGlowClass = (nodeId, status, data) => {
   if (status === 'waiting') return 'bg-slate-950 border-slate-900 opacity-40';
   if (status === 'skipped') return 'bg-slate-950 border-slate-900 opacity-30';
-  if (status === 'active') return 'bg-slate-900 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.25)] border-l-2';
+  if (status === 'active') return 'bg-slate-900 border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.25)] border-l-2';
   
   if (status === 'error') return 'bg-red-950/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] border-l-2';
   
@@ -164,7 +164,7 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 rounded-lg bg-slate-950 border border-slate-800">
           <div className="text-center p-3 border-b md:border-b-0 md:border-r border-slate-800">
             <div className="text-xs text-slate-500 font-mono uppercase tracking-wider">AMD MI300X Pipeline Time</div>
-            <div className="text-2xl font-bold text-indigo-400 font-mono mt-1">
+            <div className="text-2xl font-bold text-sky-400 font-mono mt-1">
               {actualSeconds}s <span className="text-xs font-normal text-slate-450">({elapsedMs}ms)</span>
             </div>
             <div className="text-[10px] text-slate-500 mt-1">ROCm Parallel Graph Node Execution</div>
@@ -207,7 +207,7 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                           <span className="text-[10px] uppercase font-mono text-slate-500">[{node.id}]</span>
                         </div>
                         <p className={`text-xs mt-1 font-mono ${
-                          status === 'active' ? 'text-indigo-400 animate-pulse' : 'text-slate-400'
+                          status === 'active' ? 'text-sky-400 animate-pulse' : 'text-slate-400'
                         }`}>
                           {message}
                         </p>
@@ -220,7 +220,7 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-550 border border-slate-700/50">QUEUED</span>
                       )}
                       {status === 'active' && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-indigo-400 border border-slate-700 animate-pulse">RUNNING</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700 animate-pulse">RUNNING</span>
                       )}
                       {status === 'complete' && (
                         <>
@@ -259,10 +259,10 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                         <span className="text-slate-400">Security: <span className="text-emerald-400">{data.security_status}</span></span>
                       )}
                       {data.extracted_name && (
-                        <span className="text-slate-400">Name: <span className="text-indigo-400">"{data.extracted_name}"</span></span>
+                        <span className="text-slate-400">Name: <span className="text-sky-400">"{data.extracted_name}"</span></span>
                       )}
                       {data.doc_type && (
-                        <span className="text-slate-400">Type: <span className="text-indigo-400">{data.doc_type}</span></span>
+                        <span className="text-slate-400">Type: <span className="text-sky-400">{data.doc_type}</span></span>
                       )}
                       {data.flags_count !== undefined && (
                         <span className="text-slate-400">Flags: <span className={data.flags_count > 0 ? "text-red-400" : "text-emerald-450"}>{data.flags_count}</span></span>
@@ -282,12 +282,12 @@ export default function PipelineModal({ isOpen, onClose, events, isStreaming }) 
                   <div className="flex justify-center -my-2 h-4 relative z-0">
                     <div className={`w-0.5 h-full relative ${
                       getNodeState(node.id).status === 'complete' 
-                        ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
+                        ? 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]' 
                         : 'bg-slate-800'
                     }`}>
                       {/* Traveling pulse if the next node is active or loading */}
                       {getNodeState(node.id).status === 'complete' && getNodeState(PIPELINE_NODES[index + 1].id).status === 'active' && (
-                        <div className="absolute left-1/2 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8] animate-travel" />
+                        <div className="absolute left-1/2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_#818cf8] animate-travel" />
                       )}
                     </div>
                   </div>

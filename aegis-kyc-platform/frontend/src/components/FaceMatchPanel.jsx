@@ -107,7 +107,7 @@ export default function FaceMatchPanel() {
                 value={selfieIndex}
                 onChange={(e) => setSelfieIndex(Number(e.target.value))}
                 disabled={isScanning}
-                className="w-full bg-slate-950 border border-slate-750 text-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-sky-500 transition-colors cursor-pointer"
               >
                 {SELFIE_PRESETS.map((selfie, idx) => (
                   <option key={idx} value={idx}>{selfie.label}</option>
@@ -122,7 +122,7 @@ export default function FaceMatchPanel() {
             className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-sm transition-all duration-150 ${
               isScanning
                 ? 'bg-slate-800 text-slate-650 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[0.98]'
+                : 'bg-sky-600 text-white hover:bg-sky-500 active:scale-[0.98]'
             }`}
           >
             {isScanning ? (
@@ -192,8 +192,8 @@ export default function FaceMatchPanel() {
 
           {isScanning && (
             <div className="flex-1 flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-indigo-500/25 border-t-indigo-500 animate-spin mb-4" />
-              <p className="text-sm text-indigo-300 font-medium animate-pulse">Running biometric match...</p>
+              <div className="w-8 h-8 rounded-full border-2 border-sky-500/25 border-t-sky-500 animate-spin mb-4" />
+              <p className="text-sm text-sky-300 font-medium animate-pulse">Running biometric match...</p>
             </div>
           )}
 
