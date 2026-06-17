@@ -106,7 +106,7 @@ PRIOR AGENT LOGS:
         system_prompt=_ORCHESTRATOR_SYSTEM,
         user_prompt=f"Provide a compliance decision for this case:\n\n{case_summary}",
         temperature=0.1,
-        max_tokens=256,
+        max_tokens=1024,
     )
 
     # ── Parse and validate response ────────────────────────────────────────────

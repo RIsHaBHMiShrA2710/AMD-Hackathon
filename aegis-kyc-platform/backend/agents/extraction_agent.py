@@ -98,7 +98,7 @@ async def run_extraction_agent(
         system_prompt=_SYSTEM_PROMPT,
         user_prompt=user_prompt,
         temperature=0.0,
-        max_tokens=300,
+        max_tokens=1024,
     )
 
     # ── Parse JSON response ────────────────────────────────────────────────────

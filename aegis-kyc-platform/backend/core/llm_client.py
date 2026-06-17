@@ -104,7 +104,7 @@ class LLMClient:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,   # low temperature for deterministic compliance outputs
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> str:
         """
         Send a chat completion request to the vLLM server and return the
