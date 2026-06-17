@@ -158,6 +158,39 @@ function NodeCard({ node, events }) {
               )}
             </div>
           )}
+
+          {/* Detailed watchlist flags preview */}
+          {status === 'complete' && node.id === 'compliance' && data?.flags?.length > 0 && (
+            <div className="mt-3 space-y-1.5 border-t border-slate-800/60 pt-2.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-red-400 font-semibold mb-1">
+                Flags Raised ({data.flags.length})
+              </div>
+              <div className="space-y-1">
+                {data.flags.map((flag, idx) => {
+                  const isRegistry = flag.watchlist_id === 'GOV-REGISTRY';
+                  return (
+                    <div key={idx} className="p-2 rounded bg-slate-950 border border-slate-800/60 flex flex-col gap-0.5">
+                      <div className="flex justify-between items-center">
+                        <span className={`font-mono text-[10px] font-bold ${isRegistry ? 'text-amber-400' : 'text-red-400'}`}>
+                          {isRegistry ? '🏛️ Registry Mismatch' : `⚠️ Match: ${flag.matched_name}`}
+                        </span>
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                          flag.risk_tier === 'HIGH' ? 'bg-red-950/60 text-red-400 border border-red-900/30' : 'bg-amber-950/60 text-amber-400 border border-amber-900/30'
+                        }`}>
+                          {flag.risk_tier} ({flag.score}%)
+                        </span>
+                      </div>
+                      {flag.reason && (
+                        <div className="text-[10px] text-slate-400 font-sans leading-relaxed mt-0.5">
+                          {flag.reason}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
