@@ -131,7 +131,9 @@ def _fallback_extraction(raw_text: str = "") -> dict:
     If we can heuristically identify a known preset document in the raw text
     (e.g. when LLM is offline), return its mock extracted fields.
     """
-    if "Rahul Sharma" in raw_text:
+    text_lower = raw_text.lower()
+    
+    if "rahul" in text_lower or "sharma" in text_lower:
         return {
             "full_name": "Rahul Sharma",
             "date_of_birth": "1990-08-12",
@@ -139,7 +141,7 @@ def _fallback_extraction(raw_text: str = "") -> dict:
             "document_type": "NATIONAL_ID",
             "document_number": "1234-5678-9012"
         }
-    elif "AMIT KUMAR" in raw_text or "Amit Kumar" in raw_text:
+    elif "amit" in text_lower or "kumar" in text_lower:
         return {
             "full_name": "Amit Kumar",
             "date_of_birth": "1988-04-20",
@@ -147,7 +149,7 @@ def _fallback_extraction(raw_text: str = "") -> dict:
             "document_type": "DRIVING_LICENSE",
             "document_number": "PAN8877665"
         }
-    elif "Devendra Singh" in raw_text or "देवेन्द्र सिंह" in raw_text:
+    elif "devendra" in text_lower or "देवेन्द्र" in text_lower:
         return {
             "full_name": "Devendra Singh",
             "date_of_birth": "1982-01-15",
@@ -155,21 +157,21 @@ def _fallback_extraction(raw_text: str = "") -> dict:
             "document_type": "NATIONAL_ID",
             "document_number": "5555-6666-7777"
         }
-    elif "SOKOLOV" in raw_text or "Viktor" in raw_text:
+    elif "sokolov" in text_lower or "viktor" in text_lower:
         return {
             "full_name": "Viktor Sokolov",
-            "date_of_birth": "1975-11-23",
+            "date_of_birth": "1978-11-15",
             "nationality": "Russian",
             "document_type": "PASSPORT",
             "document_number": "P1122334"
         }
-    elif "Priya Patel" in raw_text or "प्रिया पटेल" in raw_text:
+    elif "priya" in text_lower or "प्रिया" in text_lower:
         return {
             "full_name": "Priya Patel",
-            "date_of_birth": "1985-09-10",
+            "date_of_birth": "1985-12-05",
             "nationality": "Indian",
             "document_type": "NATIONAL_ID",
-            "document_number": "8888-9999-0000"
+            "document_number": "9876-5432-1098"
         }
 
     return {
