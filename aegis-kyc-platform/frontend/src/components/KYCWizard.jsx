@@ -531,6 +531,32 @@ export default function KYCWizard() {
                   </div>
                 )}
               </div>
+
+              {/* Compliance Watchlist Matches */}
+              {ocrData.compliance_flags && ocrData.compliance_flags.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <h4 className="text-[10px] font-mono text-red-400 uppercase tracking-wider font-bold mb-2.5 flex items-center gap-1.5">
+                    <span>⚠️</span> Watchlist Matches ({ocrData.compliance_flags.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {ocrData.compliance_flags.map((flag, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-red-950/20 border border-red-900/40 text-xs">
+                        <div className="flex justify-between items-start font-semibold text-red-300 gap-2">
+                          <span className="truncate">{flag.matched_name || 'Sanctions Alert'}</span>
+                          <span className="text-[9px] font-mono bg-red-950 px-1.5 py-0.5 rounded border border-red-900/50 flex-shrink-0">
+                            {flag.score}% Match ({flag.risk_tier} Risk)
+                          </span>
+                        </div>
+                        {flag.reason && (
+                          <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed font-sans">
+                            {flag.reason}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
