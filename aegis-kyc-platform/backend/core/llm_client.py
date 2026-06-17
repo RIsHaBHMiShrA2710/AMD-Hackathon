@@ -133,6 +133,12 @@ class LLMClient:
             cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
             if "<think>" in cleaned_content:
                 cleaned_content = cleaned_content.split("<think>")[0].strip()
+            
+            # Extract the raw JSON block robustly
+            first_brace = cleaned_content.find("{")
+            last_brace = cleaned_content.rfind("}")
+            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                cleaned_content = cleaned_content[first_brace:last_brace + 1]
             return cleaned_content
 
         except httpx.ConnectError:
