@@ -25,21 +25,29 @@ if sys.platform == "win32":
 # Add parent directory to path so imports work
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 from graph.kyc_graph import build_kyc_graph
 
 
 MOCK_INPUT = """
-PASSPORT
-Surname: ANDERSON
-Given Names: ROBERT JAMES
-Nationality: UNITED KINGDOM
-Date of Birth: 22 JAN 1982
-Sex: M
-Place of Birth: LONDON
-Date of Issue: 10 APR 2021
-Date of Expiry: 09 APR 2031
-Passport No: GB12345678
-Personal No: 9876543210
+GOVERNMENT OF INDIA
+UNIQUE IDENTIFICATION AUTHORITY OF INDIA
+
+To,
+Rahul Sharma
+S/O Baldev Sharma
+12, Barakhamba Road, Connaught Place,
+New Delhi - 110001
+
+DOB: 12/08/1990
+Gender: MALE
+
+YOUR AADHAAR NO:
+1234-5678-9012
+
+आधार - आम आदमी का अधिकार
 """
 
 
@@ -58,7 +66,9 @@ async def run_test():
     from core.state import KYCState
     initial_state = KYCState(
         case_id=str(uuid.uuid4()),
-        raw_input=MOCK_INPUT.strip(),
+        raw_input="",
+        input_type="image",
+        image_filename="aadhaar_rahul_sharma.png",
         extracted_data={},
         compliance_flags=[],
         confidence_score=0.0,
@@ -114,6 +124,7 @@ async def run_test():
     print(f"  Security:   {final_state.get('security_status')}")
     print(f"  Confidence: {final_state.get('confidence_score', 0):.2%}")
     print(f"  Flags:      {len(final_state.get('compliance_flags', []))}")
+    print(f"  Extracted:  {final_state.get('extracted_data')}")
     print(f"  Events:     {len(final_state.get('stream_events', []))}")
     print("=" * 60)
     print("\nAll assertions PASSED - pipeline is working correctly!\n")

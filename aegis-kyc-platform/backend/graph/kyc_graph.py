@@ -38,17 +38,17 @@ AUTO_ESCALATE_THRESHOLD = 0.95
 
 # ── Conditional Edge Functions ────────────────────────────────────────────────
 
-def route_after_guardrail(state: KYCState) -> Literal["ocr", "__end__"]:
+def route_after_guardrail(state: KYCState) -> Literal["extraction", "__end__"]:
     """
     After the guardrail node:
       - BLOCKED → jump to END immediately (document rejected)
-      - OK      → continue to ocr
+      - OK      → continue to extraction
     """
     if state.get("security_status") == "BLOCKED":
         logger.info("Graph router: guardrail BLOCKED — jumping to END")
         return END
-    logger.info("Graph router: guardrail OK — proceeding to ocr")
-    return "ocr"
+    logger.info("Graph router: guardrail OK — proceeding to extraction")
+    return "extraction"
 
 
 def route_after_compliance(state: KYCState) -> Literal["orchestrator", "sanitizer"]:
@@ -90,18 +90,20 @@ def build_kyc_graph() -> StateGraph:
 
     # ── Wire the graph edges ───────────────────────────────────────────────────
 
-    # Entry point
-    builder.add_edge(START, "guardrail")
+    # Entry point is OCR
+    builder.add_edge(START, "ocr")
 
-    # Conditional edge after guardrail (BLOCKED → END, OK → ocr)
+    # OCR leads to guardrail
+    builder.add_edge("ocr", "guardrail")
+
+    # Conditional edge after guardrail (BLOCKED → END, OK → extraction)
     builder.add_conditional_edges(
         "guardrail",
         route_after_guardrail,
-        {"ocr": "ocr", END: END},
+        {"extraction": "extraction", END: END},
     )
 
-    # Linear edges: ocr → extraction → compliance
-    builder.add_edge("ocr", "extraction")
+    # Linear edges: extraction → compliance
     builder.add_edge("extraction", "compliance")
 
     # Conditional edge after compliance (high confidence → skip orchestrator)
