@@ -103,32 +103,34 @@ export default function AuditReport({ finalState, isStreaming }) {
       {/* Decision Hero */}
       <DecisionBadge decision={final_decision} />
 
-      {/* Confidence Meter */}
-      <div className="mb-5">
-        <div className="flex justify-between text-xs text-slate-400 mb-1.5 font-mono">
-          <span>Watchlist Confidence Score</span>
-          <span className={`font-bold ${
-            confidence_score > 0.85 ? 'text-red-400' :
-            confidence_score > 0.5  ? 'text-amber-400' : 'text-emerald-400'
-          }`}>
-            {(confidence_score * 100).toFixed(1)}%
-          </span>
+      {/* Risk Match Meter */}
+      {confidence_score > 0 && (
+        <div className="mb-5">
+          <div className="flex justify-between text-xs text-slate-400 mb-1.5 font-mono">
+            <span>Watchlist Match Score</span>
+            <span className={`font-bold ${
+              confidence_score > 0.85 ? 'text-red-400' :
+              confidence_score > 0.5  ? 'text-amber-400' : 'text-emerald-400'
+            }`}>
+              {(confidence_score * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div className="h-1.5 rounded bg-slate-900 overflow-hidden">
+            <div
+              className={`h-full rounded transition-all duration-1000 ${
+                confidence_score > 0.85 ? 'bg-red-500' :
+                confidence_score > 0.5  ? 'bg-amber-500' : 'bg-emerald-600'
+              }`}
+              style={{ width: `${Math.min(confidence_score * 100, 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+            <span>0% (Clear)</span>
+            <span>85% (Review)</span>
+            <span>95% (Escalate)</span>
+          </div>
         </div>
-        <div className="h-1.5 rounded bg-slate-900 overflow-hidden">
-          <div
-            className={`h-full rounded transition-all duration-1000 ${
-              confidence_score > 0.85 ? 'bg-red-500' :
-              confidence_score > 0.5  ? 'bg-amber-500' : 'bg-emerald-600'
-            }`}
-            style={{ width: `${Math.min(confidence_score * 100, 100)}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
-          <span>0% (Clear)</span>
-          <span>85% (Review)</span>
-          <span>95% (Escalate)</span>
-        </div>
-      </div>
+      )}
 
       {/* Two-column data grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-5">
@@ -152,7 +154,9 @@ export default function AuditReport({ finalState, isStreaming }) {
           <DataField label="Security Status"   value={security_status} />
           <DataField label="Flags Detected"    value={`${compliance_flags.length} flag(s)`} />
           <DataField label="Decision"          value={final_decision} />
-          <DataField label="Confidence"        value={`${(confidence_score * 100).toFixed(2)}%`} />
+          {confidence_score > 0 && (
+            <DataField label="Watchlist Match"   value={`${(confidence_score * 100).toFixed(2)}%`} />
+          )}
           {finalState.input_type === 'image' && (
             <>
               <DataField label="OCR Language"   value={finalState.ocr_language_detected} />

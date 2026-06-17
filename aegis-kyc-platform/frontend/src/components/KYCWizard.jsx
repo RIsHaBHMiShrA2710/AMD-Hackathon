@@ -89,7 +89,10 @@ function EscalationBreakdown({ finalState }) {
 
 /* ── Final Result Card ────────────────────────────────────────────────── */
 function FinalResult({ finalState, faceResult, onReset }) {
-  const decision = finalState?.final_decision || 'PENDING'
+  let decision = finalState?.final_decision || 'PENDING'
+  if (faceResult && faceResult.verified === false) {
+    decision = 'ESCALATE'
+  }
   const isApproved = decision === 'APPROVE'
   const isReview = decision === 'REVIEW'
   const isEscalated = decision === 'ESCALATE'
@@ -128,9 +131,6 @@ function FinalResult({ finalState, faceResult, onReset }) {
           ['Nationality', finalState?.extracted_data?.nationality],
           ['Document Type', finalState?.extracted_data?.document_type],
           ['Document No.', finalState?.extracted_data?.document_number],
-          ['Confidence', (finalState?.confidence_score !== undefined && finalState?.confidence_score !== null)
-            ? `${(finalState.confidence_score * 100).toFixed(1)}%`
-            : null],
         ].map(([label, value]) => (
           <div key={label} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
             <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">{label}</div>

@@ -127,8 +127,13 @@ class LLMClient:
             response = await self._client.post("/chat/completions", json=payload)
             response.raise_for_status()
             data = response.json()
-            # Standard OpenAI-compatible response format
-            return data["choices"][0]["message"]["content"].strip()
+            content = data["choices"][0]["message"]["content"]
+            # Clean reasoning/thinking tokens (like <think>...</think>)
+            import re
+            cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            if "<think>" in cleaned_content:
+                cleaned_content = cleaned_content.split("<think>")[0].strip()
+            return cleaned_content
 
         except httpx.ConnectError:
             logger.warning("LLM server not reachable at %s — using fallback", self.base_url)
