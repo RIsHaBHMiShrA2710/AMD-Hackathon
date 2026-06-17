@@ -120,7 +120,7 @@ function FinalResult({ finalState, faceResult, onReset }) {
       {/* Escalation breakdown */}
       {(isEscalated || isReview) && <EscalationBreakdown finalState={mergedState} />}
 
-      {/* Extracted data */}
+      {/* Extracted data — show all fields including empty ones as placeholders */}
       <div className="grid grid-cols-2 gap-3">
         {[
           ['Full Name', finalState?.extracted_data?.full_name],
@@ -128,11 +128,17 @@ function FinalResult({ finalState, faceResult, onReset }) {
           ['Nationality', finalState?.extracted_data?.nationality],
           ['Document Type', finalState?.extracted_data?.document_type],
           ['Document No.', finalState?.extracted_data?.document_number],
-          ['Confidence', finalState?.confidence_score !== undefined ? `${(finalState.confidence_score * 100).toFixed(1)}%` : null],
-        ].filter(([,v]) => v && v !== 'UNKNOWN').map(([label, value]) => (
+          ['Confidence', (finalState?.confidence_score !== undefined && finalState?.confidence_score !== null)
+            ? `${(finalState.confidence_score * 100).toFixed(1)}%`
+            : null],
+        ].map(([label, value]) => (
           <div key={label} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
             <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">{label}</div>
-            <div className="text-sm text-slate-200 font-medium mt-0.5 truncate">{value}</div>
+            <div className={`text-sm font-medium mt-0.5 truncate ${
+              (!value || value === 'UNKNOWN' || value === 'EXTRACTION_FAILED') ? 'text-slate-600 italic' : 'text-slate-200'
+            }`}>
+              {(!value || value === 'UNKNOWN' || value === 'EXTRACTION_FAILED') ? '—' : value}
+            </div>
           </div>
         ))}
       </div>
@@ -180,9 +186,22 @@ export default function KYCWizard() {
   const preset = OCR_PRESETS[presetIdx]
   const imgBase = getSampleUrl()
 
+  // For mismatch, pick a selfie that is definitely a different person from the doc
+  const getMismatchSelfie = () => {
+    // Always use someone different from the current doc
+    const mismatches = {
+      'rahul': 'selfie_devendra_singh.png',
+      'amit': 'selfie_rahul_sharma.png',
+      'devendra': 'selfie_rahul_sharma.png',
+      'viktor': 'selfie_rahul_sharma.png',
+      'priya': 'selfie_devendra_singh.png',
+    }
+    return mismatches[preset.id] || 'selfie_devendra_singh.png'
+  }
+
   const getSelfieFilename = () => {
     if (selfieMode === 'spoof') return 'selfie_rahul_sharma_spoof.png'
-    if (selfieMode === 'mismatch') return 'selfie_devendra_singh.png'
+    if (selfieMode === 'mismatch') return getMismatchSelfie()
     return preset.selfie
   }
 
@@ -231,20 +250,32 @@ export default function KYCWizard() {
 
             if (event.type === 'node_start' || event.type === 'node_progress') {
               const n = event.node
-              if (n === 'ocr_agent') updateStage('ocr', { status: 'active', message: 'Reading text...' })
-              if (n === 'extraction_agent') updateStage('ocr', { status: 'active', message: 'Parsing fields...' })
-              if (n === 'compliance_agent') {
-                updateStage('ocr', { status: 'success', message: 'Done' })
-                updateStage('compliance', { status: 'active', message: 'Screening...' })
+              // Actual node names from nodes.py: 'guardrail', 'ocr', 'extraction', 'compliance', 'orchestrator', 'sanitizer'
+              if (n === 'ocr') updateStage('ocr', { status: 'active', message: 'Reading text...' })
+              if (n === 'extraction') {
+                updateStage('ocr', { status: 'active', message: 'Parsing fields...' })
               }
-              if (n === 'orchestrator_agent') updateStage('compliance', { status: 'active', message: 'Deciding...' })
+              if (n === 'compliance') {
+                setStages(prev => prev.map(s => {
+                  if (s.id === 'ocr' && s.status !== 'failed') return { ...s, status: 'success', message: 'Done' }
+                  if (s.id === 'compliance') return { ...s, status: 'active', message: 'Screening...' }
+                  return s
+                }))
+              }
+              if (n === 'orchestrator') {
+                setStages(prev => prev.map(s => {
+                  if (s.id === 'compliance' && s.status !== 'warning' && s.status !== 'failed') return { ...s, status: 'success', message: 'Clear' }
+                  return s
+                }))
+              }
             }
 
             if (event.type === 'node_complete') {
               const n = event.node
-              if (n === 'ocr_agent') updateStage('ocr', { status: 'success', message: 'Extracted' })
-              if (n === 'compliance_agent') {
-                const flagCount = event.data?.flags_count || 0
+              if (n === 'ocr') updateStage('ocr', { status: 'success', message: 'Extracted' })
+              if (n === 'extraction') updateStage('ocr', { status: 'success', message: 'Fields parsed' })
+              if (n === 'compliance') {
+                const flagCount = event.data?.flags_count ?? 0
                 updateStage('compliance', {
                   status: flagCount > 0 ? 'warning' : 'success',
                   message: flagCount > 0 ? `${flagCount} flag(s)` : 'Clear'
@@ -256,8 +287,12 @@ export default function KYCWizard() {
               const fs = event.final_state
               setFinalState(fs)
               setOcrData(fs)
-              updateStage('ocr', { status: 'success', message: 'Done' })
-              updateStage('compliance', prev => prev.status === 'idle' ? { status: 'success', message: 'Clear' } : prev)
+              // Ensure any stage not yet completed gets finalized
+              setStages(prev => prev.map(s => {
+                if (s.id === 'ocr' && s.status === 'idle') return { ...s, status: 'success', message: 'Done' }
+                if (s.id === 'compliance' && s.status === 'idle') return { ...s, status: 'success', message: 'Clear' }
+                return s
+              }))
               updateStage('face', { status: 'idle', message: '' })
               updateStage('decision', { status: 'idle', message: '' })
               setStep(3)
@@ -295,11 +330,15 @@ export default function KYCWizard() {
         message: data.verified ? 'Matched' : 'Mismatch'
       })
 
-      // Final decision
+      // Compound final decision: escalate if doc says APPROVE but face fails
+      // Also escalate if doc was already REVIEW or ESCALATE and face also fails
       const docDecision = finalState?.final_decision || 'APPROVE'
       const faceOk = data.verified
       let finalDecision = docDecision
-      if (!faceOk && docDecision === 'APPROVE') finalDecision = 'ESCALATE'
+      if (!faceOk) {
+        // Any face failure bumps to ESCALATE
+        finalDecision = 'ESCALATE'
+      }
 
       updateStage('decision', {
         status: finalDecision === 'APPROVE' ? 'success' : finalDecision === 'REVIEW' ? 'warning' : 'failed',
@@ -408,10 +447,12 @@ export default function KYCWizard() {
                   ['Nationality', ocrData.extracted_data?.nationality],
                   ['Document Type', ocrData.extracted_data?.document_type],
                   ['Document No.', ocrData.extracted_data?.document_number],
-                ].filter(([,v]) => v && v !== 'UNKNOWN').map(([label, val]) => (
+                ].map(([label, val]) => (
                   <div key={label} className="flex justify-between items-center py-1.5 border-b border-slate-800/60">
                     <span className="text-[11px] font-mono text-slate-500 uppercase">{label}</span>
-                    <span className="text-sm text-slate-200 font-medium">{val}</span>
+                    <span className={`text-sm font-medium ${(!val || val === 'UNKNOWN' || val === 'EXTRACTION_FAILED') ? 'text-slate-600 italic' : 'text-slate-200'}`}>
+                      {(!val || val === 'UNKNOWN' || val === 'EXTRACTION_FAILED') ? '—' : val}
+                    </span>
                   </div>
                 ))}
                 {ocrData.ocr_language_detected && (
